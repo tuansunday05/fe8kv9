@@ -11,7 +11,7 @@ cls_pw: 1.0  # cls BCELoss positive_weight
 obj: 0.7  # obj loss gain (scale with pixels)
 obj_pw: 1.0  # obj BCELoss positive_weight
 dfl: 1.5  # dfl loss gain
-iou_t: 0.20  # IoU training threshold
+iou_t: 0.50  # IoU training threshold
 anchor_t: 5.0  # anchor-multiple threshold
 # anchors: 3  # anchors per output layer (0 to ignore)
 fl_gamma: 0.0  # focal loss gamma (efficientDet default gamma=1.5)
