@@ -39,6 +39,8 @@ ONNX export: https://github.com/WongKinYiu/yolov9/issues/2#issuecomment-19605195
 
 TensorRT inference: https://github.com/WongKinYiu/yolov9/issues/143#issuecomment-1975049660 https://github.com/WongKinYiu/yolov9/issues/34#issue-2150393690 https://github.com/WongKinYiu/yolov9/issues/79#issue-2153547004 https://github.com/WongKinYiu/yolov9/issues/143#issue-2164002309
 
+OpenVINO: https://github.com/WongKinYiu/yolov9/issues/164#issue-2168540003
+
 C# ONNX inference: https://github.com/WongKinYiu/yolov9/issues/95#issue-2155974619
 
 C# OpenVINO inference: https://github.com/WongKinYiu/yolov9/issues/95#issuecomment-1968131244
@@ -64,6 +66,8 @@ YOLOv9 DeepSORT: https://github.com/WongKinYiu/yolov9/issues/98#issue-2156172319
 YOLOv9 counting: https://github.com/WongKinYiu/yolov9/issues/84#issue-2153904804
 
 YOLOv9 face detection: https://github.com/WongKinYiu/yolov9/issues/121#issue-2160218766
+
+YOLOv9 segmentation onnxruntime: https://github.com/WongKinYiu/yolov9/issues/151#issue-2165667350
 
 Comet logging: https://github.com/WongKinYiu/yolov9/pull/110
 
@@ -196,6 +200,50 @@ See [reparameterization.ipynb](https://github.com/WongKinYiu/yolov9/blob/main/to
 ## Teaser
 
 Parts of code of [YOLOR-Based Multi-Task Learning](https://arxiv.org/abs/2309.16921) are released in the repository.
+
+<div align="center">
+    <a href="./">
+        <img src="./figure/multitask.png" width="99%"/>
+    </a>
+</div>
+
+#### Object Detection
+
+``` shell
+# coco/labels/{split}/*.txt
+# bbox or polygon (1 instance 1 line)
+python train.py --workers 8 --device 0 --batch 32 --data data/coco.yaml --img 640 --cfg models/detect/gelan-c.yaml --weights '' --name gelan-c-det --hyp hyp.scratch-high.yaml --min-items 0 --epochs 300 --close-mosaic 10
+```
+
+#### Instance Segmentation
+
+``` shell
+# coco/labels/{split}/*.txt
+# polygon (1 instance 1 line)
+python segment/train.py --workers 8 --device 0 --batch 32  --data coco.yaml --img 640 --cfg models/segment/gelan-c-seg.yaml --weights '' --name gelan-c-seg --hyp hyp.scratch-high.yaml --epochs 300 --close-mosaic 10 --no-overlap
+```
+
+#### Panoptic Segmentation
+
+``` shell
+# coco/labels/{split}/*.txt
+# polygon (1 instance 1 line)
+# coco/stuff/{split}/*.txt
+# polygon (1 semantic 1 line)
+python panoptic/train.py --workers 8 --device 0 --batch 32  --data coco.yaml --img 640 --cfg models/panoptic/gelan-c-pan.yaml --weights '' --name gelan-c-pan --hyp hyp.scratch-high.yaml --epochs 300 --close-mosaic 10 --no-overlap
+```
+
+#### Image Captioning (not yet released)
+
+``` shell
+# coco/labels/{split}/*.txt
+# polygon (1 instance 1 line)
+# coco/stuff/{split}/*.txt
+# polygon (1 semantic 1 line)
+# coco/annotations/*.json
+# json (1 split 1 file)
+python caption/train.py --workers 8 --device 0 --batch 32  --data coco.yaml --img 640 --cfg models/caption/gelan-c-cap.yaml --weights '' --name gelan-c-cap --hyp hyp.scratch-high.yaml --epochs 300 --close-mosaic 10 --no-overlap
+```
 
 
 ## Acknowledgements

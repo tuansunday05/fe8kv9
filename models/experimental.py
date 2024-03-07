@@ -66,6 +66,30 @@ class Ensemble(nn.ModuleList):
         return y, None  # inference, train output
 
 
+class ORT_NMS(torch.autograd.Function):
+    '''ONNX-Runtime NMS operation'''
+    @staticmethod
+    def forward(ctx,
+                boxes,
+                scores,
+                max_output_boxes_per_class=torch.tensor([100]),
+                iou_threshold=torch.tensor([0.45]),
+                score_threshold=torch.tensor([0.25])):
+        device = boxes.device
+        batch = scores.shape[0]
+        num_det = random.randint(0, 100)
+        batches = torch.randint(0, batch, (num_det,)).sort()[0].to(device)
+        idxs = torch.arange(100, 100 + num_det).to(device)
+        zeros = torch.zeros((num_det,), dtype=torch.int64).to(device)
+        selected_indices = torch.cat([batches[None], zeros[None], idxs[None]], 0).T.contiguous()
+        selected_indices = selected_indices.to(torch.int64)
+        return selected_indices
+
+    @staticmethod
+    def symbolic(g, boxes, scores, max_output_boxes_per_class, iou_threshold, score_threshold):
+        return g.op("NonMaxSuppression", boxes, scores, max_output_boxes_per_class, iou_threshold, score_threshold)
+
+
 class TRT_NMS(torch.autograd.Function):
     '''TensorRT NMS operation'''
     @staticmethod
@@ -115,6 +139,47 @@ class TRT_NMS(torch.autograd.Function):
         return nums, boxes, scores, classes
 
 
+class ONNX_ORT(nn.Module):
+    '''onnx module with ONNX-Runtime NMS operation.'''
+    def __init__(self, max_obj=100, iou_thres=0.45, score_thres=0.25, max_wh=640, device=None, n_classes=80):
+        super().__init__()
+        self.device = device if device else torch.device("cpu")
+        self.max_obj = torch.tensor([max_obj]).to(device)
+        self.iou_threshold = torch.tensor([iou_thres]).to(device)
+        self.score_threshold = torch.tensor([score_thres]).to(device)
+        self.max_wh = max_wh # if max_wh != 0 : non-agnostic else : agnostic
+        self.convert_matrix = torch.tensor([[1, 0, 1, 0], [0, 1, 0, 1], [-0.5, 0, 0.5, 0], [0, -0.5, 0, 0.5]],
+                                           dtype=torch.float32,
+                                           device=self.device)
+        self.n_classes=n_classes
+
+    def forward(self, x):
+        ## https://github.com/thaitc-hust/yolov9-tensorrt/blob/main/torch2onnx.py
+        ## thanks https://github.com/thaitc-hust
+        if isinstance(x, list):  ## yolov9-c.pt and yolov9-e.pt return list
+            x = x[1]
+        x = x.permute(0, 2, 1)
+        bboxes_x = x[..., 0:1]
+        bboxes_y = x[..., 1:2]
+        bboxes_w = x[..., 2:3]
+        bboxes_h = x[..., 3:4]
+        bboxes = torch.cat([bboxes_x, bboxes_y, bboxes_w, bboxes_h], dim = -1)
+        bboxes = bboxes.unsqueeze(2) # [n_batch, n_bboxes, 4] -> [n_batch, n_bboxes, 1, 4]
+        obj_conf = x[..., 4:]
+        scores = obj_conf
+        bboxes @= self.convert_matrix
+        max_score, category_id = scores.max(2, keepdim=True)
+        dis = category_id.float() * self.max_wh
+        nmsbox = bboxes + dis
+        max_score_tp = max_score.transpose(1, 2).contiguous()
+        selected_indices = ORT_NMS.apply(nmsbox, max_score_tp, self.max_obj, self.iou_threshold, self.score_threshold)
+        X, Y = selected_indices[:, 0], selected_indices[:, 2]
+        selected_boxes = bboxes[X, Y, :]
+        selected_categories = category_id[X, Y, :].float()
+        selected_scores = max_score[X, Y, :]
+        X = X.unsqueeze(1).float()
+        return torch.cat([X, selected_boxes, selected_categories, selected_scores], 1)
+
 
 class ONNX_TRT(nn.Module):
     '''onnx module with TensorRT NMS operation.'''
@@ -159,7 +224,7 @@ class End2End(nn.Module):
         assert isinstance(max_wh,(int)) or max_wh is None
         self.model = model.to(device)
         self.model.model[-1].end2end = True
-        self.patch_model = ONNX_TRT 
+        self.patch_model = ONNX_TRT if max_wh is None else ONNX_ORT
         self.end2end = self.patch_model(max_obj, iou_thres, score_thres, max_wh, device, n_classes)
         self.end2end.eval()
 

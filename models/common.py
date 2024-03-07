@@ -672,7 +672,7 @@ class DetectMultiBackend(nn.Module):
 
         super().__init__()
         w = str(weights[0] if isinstance(weights, list) else weights)
-        pt, jit, onnx, xml, engine, coreml, saved_model, pb, tflite, edgetpu, tfjs, paddle, triton = self._model_type(w)
+        pt, jit, onnx, onnx_end2end, xml, engine, coreml, saved_model, pb, tflite, edgetpu, tfjs, paddle, triton = self._model_type(w)
         fp16 &= pt or jit or onnx or engine  # FP16
         nhwc = coreml or saved_model or pb or tflite or edgetpu  # BHWC formats (vs torch BCWH)
         stride = 32  # default stride
@@ -1182,6 +1182,18 @@ class Proto(nn.Module):
 
     def forward(self, x):
         return self.cv3(self.cv2(self.upsample(self.cv1(x))))
+
+
+class UConv(nn.Module):
+    def __init__(self, c1, c_=256, c2=256):  # ch_in, number of protos, number of masks
+        super().__init__()
+        
+        self.cv1 = Conv(c1, c_, k=3)
+        self.cv2 = nn.Conv2d(c_, c2, 1, 1)
+        self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+
+    def forward(self, x):
+        return self.up(self.cv2(self.cv1(x)))
 
 
 class Classify(nn.Module):
