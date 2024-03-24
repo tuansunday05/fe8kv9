@@ -154,5 +154,5 @@ head:
    # detection head
 
    # detect
-   [[31, 34, 37, 46, 49, 52, 16, 19, 22], 1, TripleDetect, [nc]],  # TripleDetect(A3, A4, A5, B3, B4, B5, P3, P4, P5)
+   [[31, 34, 37, 46, 49, 52, 16, 19, 22], 1, TripleDDetect, [nc]],  # TripleDetect(A3, A4, A5, B3, B4, B5, P3, P4, P5)
   ]
