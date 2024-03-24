@@ -156,5 +156,5 @@ head:
    [-1, 1, RepNCSPELAN4, [512, 1024, 512, 2]],  # 55 (P5/32-large)
 
    # detect
-   [[35, 32, 29, 36, 39, 42, 49, 52, 55], 1, TripleDetect, [nc]],  # DualDDetect(A3, A4, A5, B3, B4, , P3, P4, P5)
+   [[35, 32, 29, 42, 39, 36, 49, 52, 55], 1, TripleDetect, [nc]],  # DualDDetect(A3, A4, A5, B3, B4, , P3, P4, P5)
   ]
