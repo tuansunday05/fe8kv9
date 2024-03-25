@@ -189,11 +189,15 @@ def run(
         # Inference
         with dt[1]:
             preds, train_out = model(im) if compute_loss else (model(im, augment=augment), None)
-            preds = preds[2]
             train_out = train_out[2]
 
         # Loss
-        #if compute_loss:
+        if compute_loss:
+            preds = preds[2]
+        else:
+            preds = preds[0][2]
+
+
         #    loss += compute_loss(train_out, targets)[2]  # box, obj, cls
 
         # NMS
