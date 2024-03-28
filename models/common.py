@@ -1282,7 +1282,6 @@ class SpatialAttention(nn.Module):
         super().__init__()
         assert kernel_size in (3, 7), 'kernel size must be 3 or 7'
         padding = 3 if kernel_size == 7 else 1
-        # (特征图的大小-算子的size+2*padding)/步长+1
         self.conv = nn.Conv2d(2, 1, kernel_size, padding=padding, bias=False)
         self.sigmoid = nn.Sigmoid()
 
@@ -1300,7 +1299,7 @@ class CBAM(nn.Module):
     # CSP Bottleneck with 3 convolutions
     def __init__(self, c1, c2, ratio=16, kernel_size=7):  # ch_in, ch_out, number, shortcut, groups, expansion
         super().__init__()
-        self.channel_attention = ChannelAttention(c1, ratio)
+        self.channel_attention = ChannelAttention(2*c1, ratio)
         self.spatial_attention = SpatialAttention(kernel_size)
 
     def forward(self, x):
