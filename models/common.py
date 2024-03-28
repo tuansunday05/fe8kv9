@@ -1283,7 +1283,7 @@ class ChannelAttension(nn.Module):
 
 class SpatialAttention(nn.Module):
 
-    def __init__(self,kernel_size=7):
+    def __init__(self,kernel_size=3):
         super(SpatialAttention,self).__init__()
 
         assert kernel_size in (3,7),'kernal size must be 3 or 7'
@@ -1301,7 +1301,7 @@ class SpatialAttention(nn.Module):
         return torch.mult(x,out)
 
 class CBAMC3(nn.Module):
-    def __init__(self, c1, c2, c3, c4, c5=1, n=1, shortcut=True, g=1, e=0.5):
+    def __init__(self, c1, c2, c3, c4, n=1, shortcut=True, g=1, e=0.5):
         super(CBAMC3, self).__init__()
         c_ = int(c2 * e)
         self.cv1 = Conv(c1, c_, 1, 1)
@@ -1309,7 +1309,7 @@ class CBAMC3(nn.Module):
         self.cv3 = Conv(2 * c_, c2, 1)
         self.m = nn.Sequential(*[Bottleneck(c_, c_, shortcut, g, e=1.0) for _ in range(n)])
         self.channel_attention = ChannelAttension(c2, 16)
-        self.spatial_attention = SpatialAttention(7)
+        self.spatial_attention = SpatialAttention(3)
         self.cv4 = Conv(c3 + (2 * c4), c2, 1, 1)
 
     def forward(self, x):
