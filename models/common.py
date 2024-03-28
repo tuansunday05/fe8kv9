@@ -1299,9 +1299,9 @@ class SpatialAttention(nn.Module):
         out = self.sigmoid(self.conv(out))
         return torch.mult(x,out)
 
-class CBAMC4(nn.Module):
+class CBAMC3(nn.Module):
     def __init__(self,c1,c2,n=1,shortcut=True,g=1,e=0.5):
-        super(CBAMC4,self).__init__()
+        super(CBAMC3,self).__init__()
         c_ = int(c2 * e)
         self.cv1= Conv(c1,c_,1,1)
         self.cv2= Conv(c1,c_,1,1)
@@ -1314,9 +1314,9 @@ class CBAMC4(nn.Module):
     def forward(self,x):
         return self.spatial_attention(self.channel_attention(self.cv3(torch.cat((self.m(self.cv1(x)),self.cv2(x)),dim=1))))
 
-class CBAMC3(nn.Module):
+class CBAMC4(nn.Module):
     def __init__(self, c1, c2, c3, c4, n=1, shortcut=True, g=1, e=0.5):
-        super(CBAMC3, self).__init__()
+        super(CBAMC4, self).__init__()
         c_ = int(c2 * e)
         self.cv1 = Conv(c1, c_, 1, 1)
         self.cv2 = nn.Sequential(RepNCSP(c1, c_, c2), Conv(c_, c_, 3, 1))  # Integrated RepNCSP into CBAMC3
