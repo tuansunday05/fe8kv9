@@ -1301,19 +1301,24 @@ class SpatialAttention(nn.Module):
         return torch.mult(x,out)
 
 class CBAMC3(nn.Module):
-    def __init__(self,c1,c2,n=1,shortcut=True,g=1,e=0.5):
-        super(CBAMC3,self).__init__()
+    def __init__(self, c1, c2, c3, c4, c5=1, n=1, shortcut=True, g=1, e=0.5):
+        super(CBAMC3, self).__init__()
         c_ = int(c2 * e)
-        self.cv1= Conv(c1,c_,1,1)
-        self.cv2= Conv(c1,c_,1,1)
-        self.cv3= Conv(2,c_,c2,1)
-
-        self.m =nn.Sequential(*[Bottleneck(c_,c_,shortcut,g,e=1.0) for _ in range(n)])
-        self.channel_attention = ChannelAttension(c2,16)
+        self.cv1 = Conv(c1, c_, 1, 1)
+        self.cv2 = Conv(c1, c_, 1, 1)
+        self.cv3 = Conv(2 * c_, c2, 1)
+        self.m = nn.Sequential(*[Bottleneck(c_, c_, shortcut, g, e=1.0) for _ in range(n)])
+        self.channel_attention = ChannelAttension(c2, 16)
         self.spatial_attention = SpatialAttention(7)
+        self.cv4 = Conv(c3 + (2 * c4), c2, 1, 1)
 
-    def forward(self,x):
-        return self.spatial_attention(self.channel_attention(self.cv3(torch.cat((self.m(self.cv1(x)),self.cv2(x)),dim=1))))
+    def forward(self, x):
+        y = list(self.cv1(x).chunk(2, 1))
+        y.extend((m(y[-1])) for m in [self.cv2, self.cv3])
+        y = torch.cat(y, 1)
+        y = self.m(y)
+        y = self.spatial_attention(self.channel_attention(y))
+        return self.cv4(y)
  
 # class CBAMC4(nn.Module):
 #     def __init__(self, c1, c2, c3, c4, n=1, shortcut=True, g=1, e=0.5):
