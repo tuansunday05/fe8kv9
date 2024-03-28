@@ -1213,51 +1213,141 @@ class Classify(nn.Module):
 
 
 # ----------------------- Attention Mechanism ---------------------------
-from torch.nn import init
 
 ## CBAM ATTENTION
-class ChannelAttentionModule(nn.Module):
-    def __init__(self, c1, reduction=16):
-        super(ChannelAttentionModule, self).__init__()
-        mid_channel = c1 // reduction
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)
-        self.max_pool = nn.AdaptiveMaxPool2d(1)
+# class ChannelAttentionModule(nn.Module):
+#     def __init__(self, c1, reduction=16):
+#         super(ChannelAttentionModule, self).__init__()
+#         mid_channel = c1 // reduction
+#         self.avg_pool = nn.AdaptiveAvgPool2d(1)
+#         self.max_pool = nn.AdaptiveMaxPool2d(1)
 
-        self.shared_MLP = nn.Sequential(
-            nn.Linear(in_features=c1, out_features=mid_channel),
-            nn.LeakyReLU(0.1, inplace=True),
-            nn.Linear(in_features=mid_channel, out_features=c1)
-        )
-        self.act = nn.Sigmoid()
-        #self.act=nn.SiLU()
-    def forward(self, x):
-        avgout = self.shared_MLP(self.avg_pool(x).view(x.size(0),-1)).unsqueeze(2).unsqueeze(3)
-        maxout = self.shared_MLP(self.max_pool(x).view(x.size(0),-1)).unsqueeze(2).unsqueeze(3)
-        return self.act(avgout + maxout)
+#         self.shared_MLP = nn.Sequential(
+#             nn.Linear(in_features=c1, out_features=mid_channel),
+#             nn.LeakyReLU(0.1, inplace=True),
+#             nn.Linear(in_features=mid_channel, out_features=c1)
+#         )
+#         self.act = nn.Sigmoid()
+#         #self.act=nn.SiLU()
+#     def forward(self, x):
+#         avgout = self.shared_MLP(self.avg_pool(x).view(x.size(0),-1)).unsqueeze(2).unsqueeze(3)
+#         maxout = self.shared_MLP(self.max_pool(x).view(x.size(0),-1)).unsqueeze(2).unsqueeze(3)
+#         return self.act(avgout + maxout)
         
-class SpatialAttentionModule(nn.Module):
-    def __init__(self):
-        super(SpatialAttentionModule, self).__init__()
-        self.conv2d = nn.Conv2d(in_channels=2, out_channels=1, kernel_size=7, stride=1, padding=3)
-        self.act = nn.Sigmoid()
-    def forward(self, x):
-        avgout = torch.mean(x, dim=1, keepdim=True)
-        maxout, _ = torch.max(x, dim=1, keepdim=True)
-        out = torch.cat([avgout, maxout], dim=1)
-        out = self.act(self.conv2d(out))
-        return out
+# class SpatialAttentionModule(nn.Module):
+#     def __init__(self):
+#         super(SpatialAttentionModule, self).__init__()
+#         self.conv2d = nn.Conv2d(in_channels=2, out_channels=1, kernel_size=7, stride=1, padding=3)
+#         self.act = nn.Sigmoid()
+#     def forward(self, x):
+#         avgout = torch.mean(x, dim=1, keepdim=True)
+#         maxout, _ = torch.max(x, dim=1, keepdim=True)
+#         out = torch.cat([avgout, maxout], dim=1)
+#         out = self.act(self.conv2d(out))
+#         return out
 
-class CBAM(nn.Module):
-    def __init__(self, c1,c2):
-        super(CBAM, self).__init__()
-        self.channel_attention = ChannelAttentionModule(c1)
-        self.spatial_attention = SpatialAttentionModule()
+# class CBAM(nn.Module):
+#     def __init__(self, c1,c2):
+#         super(CBAM, self).__init__()
+#         self.channel_attention = ChannelAttentionModule(c1)
+#         self.spatial_attention = SpatialAttentionModule()
 
-    def forward(self, x):
-        out = self.channel_attention(x) * x
-        out = self.spatial_attention(out) * out
-        return out
+#     def forward(self, x):
+#         out = self.channel_attention(x) * x
+#         out = self.spatial_attention(out) * out
+#         return out
     
+## CBAMC3
+class ChannelAttension(nn.Module):
+
+    def __init__(self,in_planes,ratio=16):
+        super(ChannelAttension,self).__init__()
+        self.avg_pool =nn.AdaptiveAvgPool2d(1)
+        self.max_pool=nn.AdaptiveAvgPool2d(1)
+
+        self.f1 = nn.Conv2d(in_planes,in_planes // ratio,1,bias=False)
+        self.relu =nn.ReLU()
+        self.f2=nn.Conv2d(in_planes //ratio,in_planes,1,bias=False)
+
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self,x):
+        avg_out = self.f2(self.relu(self.f1(self.avg_pool(x))))
+        max_out=self.f2(self.relu(self.f1(self.max_pool(x))))
+
+        out= self.sigmoid(avg_out+max_out)
+
+        return torch.mul(x,out)
+
+
+class SpatialAttention(nn.Module):
+
+    def __init__(self,kernel_size=7):
+        super(SpatialAttention,self).__init__()
+
+        assert kernel_size in (3,7),'kernal size must be 3 or 7'
+        padding =3 if kernel_size ==7 else 1
+
+        self.conv =nn.Conv2d(2,1,kernel_size,padding=padding,bias=False)
+        self.sigmoid =nn.Sigmoid()
+
+    def forward(self,x):
+
+        avg_out=torch.mean(x,dim=1,keepdim=True)
+        max_out, _ = torch.max(x,dim=1,keepdim=True)
+        out = torch.cat([avg_out,max_out],dim=1)
+        out = self.sigmoid(self.conv(out))
+        return torch.mult(x,out)
+
+class CBAMC3(nn.Module):
+    def __init__(self,c1,c2,n=1,shortcut=True,g=1,e=0.5):
+        super(CBAMC3,self).__init__()
+        c_ = int(c2 * e)
+        self.cv1= Conv(c1,c_,1,1)
+        self.cv2= Conv(c1,c_,1,1)
+        self.cv3= Conv(2,c_,c2,1)
+
+        self.m =nn.Sequential(*[Bottleneck(c_,c_,shortcut,g,e=1.0) for _ in range(n)])
+        self.channel_attention = ChannelAttension(c2,16)
+        self.spatial_attention = SpatialAttention(7)
+
+    def forward(self,x):
+        return self.spatial_attention(self.channel_attention(self.cv3(torch.cat((self.m(self.cv1(x)),self.cv2(x)),dim=1))))
+
+class CBAMC4(nn.Module):
+    def __init__(self, c1, c2, c3, c4, n=1, shortcut=True, g=1, e=0.5):
+        super(CBAMC4, self).__init__()
+        c_ = int(c2 * e)
+        self.cv1 = Conv(c1, c_, 1, 1)
+        self.cv2 = nn.Sequential(RepNCSP(c1, c_, c2), Conv(c_, c_, 3, 1))  # Integrated RepNCSP into CBAMC3
+        self.cv3 = Conv(2, c_, c2, 1)  # This might need adjustment based on input sizes in your specific case
+        self.cv4 = Conv(c3 + (2 * c_), c4, 1, 1)
+
+        self.m = nn.Sequential(*[Bottleneck(c_, c_, shortcut, g, e=1.0) for _ in range(n)])
+        self.channel_attention = ChannelAttension(c4, 16)
+        self.spatial_attention = SpatialAttention(7)
+
+    def forward(self, x):
+        # Split the input tensor into two parts
+        x1, x2 = x.chunk(2, dim=1)
+
+        # Process each part separately
+        x1 = self.cv1(x1)
+        x2 = self.cv2(x2)  # Applying nn.Sequential(RepNCSP) here
+
+        # Concatenate processed parts
+        x = torch.cat((x1, x2), dim=1)
+
+        # Process concatenated tensor with the rest of the CBAMC3 block
+        x = self.cv3(x)
+        x = self.m(x)
+        x = self.cv4(x)
+
+        # Apply attention mechanisms
+        x = self.spatial_attention(self.channel_attention(x))
+
+        return x
+
 ## GAM ATTETION
 class GAMAttention(nn.Module):
        #https://paperswithcode.com/paper/global-attention-mechanism-retain-information
@@ -1294,6 +1384,7 @@ def channel_shuffle(x, groups=2):
         out = x.view(B, groups, C // groups, H, W).permute(0, 2, 1, 3, 4).contiguous()
         out=out.view(B, C, H, W) 
         return out
+
 
 ## SK ATTENTION
 
@@ -1345,6 +1436,9 @@ class SKAttention(nn.Module):
         return V
     
 ## SHUFFLE ATTENTION
+from torch.nn.parameter import Parameter
+from torch.nn import init
+
 class ShuffleAttention(nn.Module):
 
     def __init__(self, channel=512, out_channel=512, reduction=16,G=8):
