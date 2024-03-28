@@ -1258,95 +1258,94 @@ class Classify(nn.Module):
 #         return out
     
 ## CBAMC3
-class ChannelAttension(nn.Module):
+class ChannelAttention(nn.Module):
 
-    def __init__(self,in_planes,ratio=16):
-        super(ChannelAttension,self).__init__()
-        self.avg_pool =nn.AdaptiveAvgPool2d(1)
-        self.max_pool=nn.AdaptiveAvgPool2d(1)
-
-        self.f1 = nn.Conv2d(in_planes,in_planes // ratio,1,bias=False)
-        self.relu =nn.ReLU()
-        self.f2=nn.Conv2d(in_planes //ratio,in_planes,1,bias=False)
-
+    def __init__(self, in_planes, ratio=16):
+        super().__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.max_pool = nn.AdaptiveMaxPool2d(1)
+        self.f1 = nn.Conv2d(in_planes, in_planes // ratio, 1, bias=False)
+        self.relu = nn.ReLU()
+        self.f2 = nn.Conv2d(in_planes // ratio, in_planes, 1, bias=False)
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self,x):
+    def forward(self, x):
         avg_out = self.f2(self.relu(self.f1(self.avg_pool(x))))
-        max_out=self.f2(self.relu(self.f1(self.max_pool(x))))
-
-        out= self.sigmoid(avg_out+max_out)
-
-        return torch.mul(x,out)
+        max_out = self.f2(self.relu(self.f1(self.max_pool(x))))
+        out = self.sigmoid(avg_out + max_out)
+        return out
 
 
 class SpatialAttention(nn.Module):
 
-    def __init__(self,kernel_size=7):
-        super(SpatialAttention,self).__init__()
+    def __init__(self, kernel_size=7):
+        super().__init__()
+        assert kernel_size in (3, 7), 'kernel size must be 3 or 7'
+        padding = 3 if kernel_size == 7 else 1
+        # (特征图的大小-算子的size+2*padding)/步长+1
+        self.conv = nn.Conv2d(2, 1, kernel_size, padding=padding, bias=False)
+        self.sigmoid = nn.Sigmoid()
 
-        assert kernel_size in (3,7),'kernal size must be 3 or 7'
-        padding =3 if kernel_size ==7 else 1
+    def forward(self, x):
+        # 1*h*w
+        avg_out = torch.mean(x, dim=1, keepdim=True)
+        max_out, _ = torch.max(x, dim=1, keepdim=True)
+        x = torch.cat([avg_out, max_out], dim=1)
+        #2*h*w
+        x = self.conv(x)
+        #1*h*w
+        return self.sigmoid(x)
 
-        self.conv =nn.Conv2d(2,1,kernel_size,padding=padding,bias=False)
-        self.sigmoid =nn.Sigmoid()
+class CBAM(nn.Module):
+    # CSP Bottleneck with 3 convolutions
+    def __init__(self, c1, c2, ratio=16, kernel_size=7):  # ch_in, ch_out, number, shortcut, groups, expansion
+        super().__init__()
+        self.channel_attention = ChannelAttention(c1, ratio)
+        self.spatial_attention = SpatialAttention(kernel_size)
 
-    def forward(self,x):
-
-        avg_out=torch.mean(x,dim=1,keepdim=True)
-        max_out, _ = torch.max(x,dim=1,keepdim=True)
-        out = torch.cat([avg_out,max_out],dim=1)
-        out = self.sigmoid(self.conv(out))
-        return torch.mult(x,out)
-
-class CBAMC3(nn.Module):
-    def __init__(self,c1,c2,n=1,shortcut=True,g=1,e=0.5):
-        super(CBAMC3,self).__init__()
-        c_ = int(c2 * e)
-        self.cv1= Conv(c1,c_,1,1)
-        self.cv2= Conv(c1,c_,1,1)
-        self.cv3= Conv(2,c_,c2,1)
-
-        self.m =nn.Sequential(*[Bottleneck(c_,c_,shortcut,g,e=1.0) for _ in range(n)])
-        self.channel_attention = ChannelAttension(c2,16)
-        self.spatial_attention = SpatialAttention(7)
+    def forward(self, x):
+        out = self.channel_attention(x) * x
+        # c*h*w
+        # c*h*w * 1*h*w
+        out = self.spatial_attention(out) * out
+        return out
 
     def forward(self,x):
         return self.spatial_attention(self.channel_attention(self.cv3(torch.cat((self.m(self.cv1(x)),self.cv2(x)),dim=1))))
 
-class CBAMC4(nn.Module):
-    def __init__(self, c1, c2, c3, c4, n=1, shortcut=True, g=1, e=0.5):
-        super(CBAMC4, self).__init__()
-        c_ = int(c2 * e)
-        self.cv1 = Conv(c1, c_, 1, 1)
-        self.cv2 = nn.Sequential(RepNCSP(c1, c_, c2), Conv(c_, c_, 3, 1))  # Integrated RepNCSP into CBAMC3
-        self.cv3 = Conv(2 * c_, c_, c2, 1)  # Adjusted input channels to match expected channels
-        self.cv4 = Conv(c3 + (2 * c_), c4, 1, 1)
+# class CBAMC4(nn.Module):
+#     def __init__(self, c1, c2, c3, c4, n=1, shortcut=True, g=1, e=0.5):
+#         super(CBAMC4, self).__init__()
+#         c_ = int(c2 * e)
+#         self.cv1 = Conv(c1, c_, 1, 1)
+#         self.cv2 = nn.Sequential(RepNCSP(c1, c_, c2), Conv(c_, c_, 3, 1))  # Integrated RepNCSP into CBAMC3
+#         self.cv3 = Conv(2 * c_, c_, c2, 1)  # Adjusted input channels to match expected channels
+#         self.cv4 = Conv(c3 + (2 * c_), c4, 1, 1)
 
-        self.m = nn.Sequential(*[Bottleneck(c_, c_, shortcut, g, e=1.0) for _ in range(n)])
-        self.channel_attention = ChannelAttension(c4, 16)
-        self.spatial_attention = SpatialAttention(7)
+#         self.m = nn.Sequential(*[Bottleneck(c_, c_, shortcut, g, e=1.0) for _ in range(n)])
+#         self.channel_attention = ChannelAttension(c4, 16)
+#         self.spatial_attention = SpatialAttention(7)
 
-    def forward(self, x):
-        # Split the input tensor into two parts
-        x1, x2 = x.chunk(2, dim=1)
+#     def forward(self, x):
+#         # Split the input tensor into two parts
+#         x1, x2 = x.chunk(2, dim=1)
 
-        # Process each part separately
-        x1 = self.cv1(x1)
-        x2 = self.cv2(x2)  # Applying nn.Sequential(RepNCSP) here
+#         # Process each part separately
+#         x1 = self.cv1(x1)
+#         x2 = self.cv2(x2)  # Applying nn.Sequential(RepNCSP) here
 
-        # Concatenate processed parts
-        x = torch.cat((x1, x2), dim=1)
+#         # Concatenate processed parts
+#         x = torch.cat((x1, x2), dim=1)
 
-        # Process concatenated tensor with the rest of the CBAMC3 block
-        x = self.cv3(x)
-        x = self.m(x)
-        x = self.cv4(x)
+#         # Process concatenated tensor with the rest of the CBAMC3 block
+#         x = self.cv3(x)
+#         x = self.m(x)
+#         x = self.cv4(x)
 
-        # Apply attention mechanisms
-        x = self.spatial_attention(self.channel_attention(x))
+#         # Apply attention mechanisms
+#         x = self.spatial_attention(self.channel_attention(x))
 
-        return x
+#         return x
 
 ## GAM ATTETION
 class GAMAttention(nn.Module):
