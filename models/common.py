@@ -1310,8 +1310,8 @@ class CBAM(nn.Module):
         out = self.spatial_attention(out) * out
         return out
 
-    def forward(self,x):
-        return self.spatial_attention(self.channel_attention(self.cv3(torch.cat((self.m(self.cv1(x)),self.cv2(x)),dim=1))))
+    # def forward(self,x):
+    #     return self.spatial_attention(self.channel_attention(self.cv3(torch.cat((self.m(self.cv1(x)),self.cv2(x)),dim=1))))
 
 # class CBAMC4(nn.Module):
 #     def __init__(self, c1, c2, c3, c4, n=1, shortcut=True, g=1, e=0.5):
