@@ -1210,3 +1210,221 @@ class Classify(nn.Module):
         if isinstance(x, list):
             x = torch.cat(x, 1)
         return self.linear(self.drop(self.pool(self.conv(x)).flatten(1)))
+
+
+# ----------------------- Attention Mechanism ---------------------------
+from torch.nn import init
+
+## CBAM ATTENTION
+class ChannelAttentionModule(nn.Module):
+    def __init__(self, c1, reduction=16):
+        super(ChannelAttentionModule, self).__init__()
+        mid_channel = c1 // reduction
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.max_pool = nn.AdaptiveMaxPool2d(1)
+
+        self.shared_MLP = nn.Sequential(
+            nn.Linear(in_features=c1, out_features=mid_channel),
+            nn.LeakyReLU(0.1, inplace=True),
+            nn.Linear(in_features=mid_channel, out_features=c1)
+        )
+        self.act = nn.Sigmoid()
+        #self.act=nn.SiLU()
+    def forward(self, x):
+        avgout = self.shared_MLP(self.avg_pool(x).view(x.size(0),-1)).unsqueeze(2).unsqueeze(3)
+        maxout = self.shared_MLP(self.max_pool(x).view(x.size(0),-1)).unsqueeze(2).unsqueeze(3)
+        return self.act(avgout + maxout)
+        
+class SpatialAttentionModule(nn.Module):
+    def __init__(self):
+        super(SpatialAttentionModule, self).__init__()
+        self.conv2d = nn.Conv2d(in_channels=2, out_channels=1, kernel_size=7, stride=1, padding=3)
+        self.act = nn.Sigmoid()
+    def forward(self, x):
+        avgout = torch.mean(x, dim=1, keepdim=True)
+        maxout, _ = torch.max(x, dim=1, keepdim=True)
+        out = torch.cat([avgout, maxout], dim=1)
+        out = self.act(self.conv2d(out))
+        return out
+
+class CBAM(nn.Module):
+    def __init__(self, c1,c2):
+        super(CBAM, self).__init__()
+        self.channel_attention = ChannelAttentionModule(c1)
+        self.spatial_attention = SpatialAttentionModule()
+
+    def forward(self, x):
+        out = self.channel_attention(x) * x
+        out = self.spatial_attention(out) * out
+        return out
+    
+## GAM ATTETION
+class GAMAttention(nn.Module):
+       #https://paperswithcode.com/paper/global-attention-mechanism-retain-information
+    def __init__(self, c1, c2, group=True,rate=4):
+        super(GAMAttention, self).__init__()
+        
+        self.channel_attention = nn.Sequential(
+            nn.Linear(c1, int(c1 / rate)),
+            nn.ReLU(inplace=True),
+            nn.Linear(int(c1 / rate), c1)
+        )
+        self.spatial_attention = nn.Sequential(
+            nn.Conv2d(c1, c1//rate, kernel_size=7, padding=3,groups=rate)if group else nn.Conv2d(c1, int(c1 / rate), kernel_size=7, padding=3), 
+            nn.BatchNorm2d(int(c1 /rate)),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(c1//rate, c2, kernel_size=7, padding=3,groups=rate) if group else nn.Conv2d(int(c1 / rate), c2, kernel_size=7, padding=3), 
+            nn.BatchNorm2d(c2)
+        )
+
+    def forward(self, x):
+        b, c, h, w = x.shape
+        x_permute = x.permute(0, 2, 3, 1).view(b, -1, c)
+        x_att_permute = self.channel_attention(x_permute).view(b, h, w, c)
+        x_channel_att = x_att_permute.permute(0, 3, 1, 2)
+        x = x * x_channel_att
+ 
+        x_spatial_att = self.spatial_attention(x).sigmoid()
+        x_spatial_att=channel_shuffle(x_spatial_att,4) #last shuffle 
+        out = x * x_spatial_att
+        return out  
+
+def channel_shuffle(x, groups=2):
+        B, C, H, W = x.size()
+        out = x.view(B, groups, C // groups, H, W).permute(0, 2, 1, 3, 4).contiguous()
+        out=out.view(B, C, H, W) 
+        return out
+
+## SK ATTENTION
+
+class SKAttention(nn.Module):
+
+    def __init__(self, channel=512,out_channel=512,kernels=[1,3,5,7],reduction=16,group=1,L=32):
+        super().__init__()
+        self.d=max(L,channel//reduction)
+        self.convs=nn.ModuleList([])
+        for k in kernels:
+            self.convs.append(
+                nn.Sequential(OrderedDict([
+                    ('conv',nn.Conv2d(channel,channel,kernel_size=k,padding=k//2,groups=group)),
+                    ('bn',nn.BatchNorm2d(channel)),
+                    ('relu',nn.ReLU())
+                ]))
+            )
+        self.fc=nn.Linear(channel,self.d)
+        self.fcs=nn.ModuleList([])
+        for i in range(len(kernels)):
+            self.fcs.append(nn.Linear(self.d,channel))
+        self.softmax=nn.Softmax(dim=0)
+
+    def forward(self, x):
+        bs, c, _, _ = x.size()
+        conv_outs=[]
+        ### split
+        for conv in self.convs:
+            conv_outs.append(conv(x))
+        feats=torch.stack(conv_outs,0)#k,bs,channel,h,w
+
+        ### fuse
+        U=sum(conv_outs) #bs,c,h,w
+
+        ### reduction channel
+        S=U.mean(-1).mean(-1) #bs,c
+        Z=self.fc(S) #bs,d
+
+        ### calculate attention weight
+        weights=[]
+        for fc in self.fcs:
+            weight=fc(Z)
+            weights.append(weight.view(bs,c,1,1)) #bs,channel
+        attention_weughts=torch.stack(weights,0)#k,bs,channel,1,1
+        attention_weughts=self.softmax(attention_weughts)#k,bs,channel,1,1
+
+        ### fuse
+        V=(attention_weughts*feats).sum(0)
+        return V
+    
+## SHUFFLE ATTENTION
+class ShuffleAttention(nn.Module):
+
+    def __init__(self, channel=512, out_channel=512, reduction=16,G=8):
+        super().__init__()
+        self.G=G
+        self.channel=channel
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.gn = nn.GroupNorm(channel // (2 * G), channel // (2 * G))
+        self.cweight = Parameter(torch.zeros(1, channel // (2 * G), 1, 1))
+        self.cbias = Parameter(torch.ones(1, channel // (2 * G), 1, 1))
+        self.sweight = Parameter(torch.zeros(1, channel // (2 * G), 1, 1))
+        self.sbias = Parameter(torch.ones(1, channel // (2 * G), 1, 1))
+        self.sigmoid=nn.Sigmoid()
+
+
+    def init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                init.kaiming_normal_(m.weight, mode='fan_out')
+                if m.bias is not None:
+                    init.constant_(m.bias, 0)
+            elif isinstance(m, nn.BatchNorm2d):
+                init.constant_(m.weight, 1)
+                init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear):
+                init.normal_(m.weight, std=0.001)
+                if m.bias is not None:
+                    init.constant_(m.bias, 0)
+
+
+    @staticmethod
+    def channel_shuffle(x, groups):
+        b, c, h, w = x.shape
+        x = x.reshape(b, groups, -1, h, w)
+        x = x.permute(0, 2, 1, 3, 4)
+
+        # flatten
+        x = x.reshape(b, -1, h, w)
+
+        return x
+
+    def forward(self, x):
+        b, c, h, w = x.size()
+        #group into subfeatures
+        x=x.view(b*self.G,-1,h,w) #bs*G,c//G,h,w
+
+        #channel_split
+        x_0,x_1=x.chunk(2,dim=1) #bs*G,c//(2*G),h,w
+
+        #channel attention
+        x_channel=self.avg_pool(x_0) #bs*G,c//(2*G),1,1
+        x_channel=self.cweight*x_channel+self.cbias #bs*G,c//(2*G),1,1
+        x_channel=x_0*self.sigmoid(x_channel)
+
+        #spatial attention
+        x_spatial=self.gn(x_1) #bs*G,c//(2*G),h,w
+        x_spatial=self.sweight*x_spatial+self.sbias #bs*G,c//(2*G),h,w
+        x_spatial=x_1*self.sigmoid(x_spatial) #bs*G,c//(2*G),h,w
+
+        # concatenate along channel axis
+        out=torch.cat([x_channel,x_spatial],dim=1)  #bs*G,c//G,h,w
+        out=out.contiguous().view(b,-1,h,w)
+
+        # channel shuffle
+        out = self.channel_shuffle(out, 2)
+        return out
+
+## ECA
+class EfficientChannelAttention(nn.Module):           # Efficient Channel Attention module
+    def __init__(self, c, b=1, gamma=2):
+        super(EfficientChannelAttention, self).__init__()
+        t = int(abs((math.log(c, 2) + b) / gamma))
+        k = t if t % 2 else t + 1
+
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.conv1 = nn.Conv1d(1, 1, kernel_size=k, padding=int(k/2), bias=False)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        out = self.avg_pool(x)
+        out = self.conv1(out.squeeze(-1).transpose(-1, -2)).transpose(-1, -2).unsqueeze(-1)
+        out = self.sigmoid(out)
+        return out * x
