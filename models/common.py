@@ -1301,7 +1301,7 @@ class SpatialAttention(nn.Module):
         return torch.mult(x,out)
 
 class CBAMC3(nn.Module):
-    def __init__(self, c1, c2, c3, c4, n=1, shortcut=True, g=1, e=1):
+    def __init__(self, c1, c2, c3, c4, n=1, shortcut=True, g=1, e=0.5):
         super(CBAMC3, self).__init__()
         c_ = int(c2 * e)
         self.cv1 = Conv(c1, c_, 1, 1)
