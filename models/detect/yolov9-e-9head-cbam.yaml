@@ -65,7 +65,7 @@ backbone:
    [[12, 13, 14, -1], 1, CBFuse, [[2, 2, 2]]], # 21  
 
    # csp-elan block
-   [-1, 1, CBAMBottleneck, [512],  # 22 # [-1, 1, ECABottleneck, [512]], # [-1, 1, CBAMBottleneck, [512], # [-1, 1, CBAMC4, [512, 256, 128, 2]]
+   [-1, 1, CBAMBottleneck, [512]],  # 22 # [-1, 1, ECABottleneck, [512]], # [-1, 1, CBAMBottleneck, [512], # [-1, 1, CBAMC4, [512, 256, 128, 2]]
 
    # avg-conv down fuse
    [-1, 1, ADown, [512]],  # 23-P4/16
