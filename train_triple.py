@@ -313,9 +313,9 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                     loss *= 4.
 
             # Backward
-            # torch.use_deterministic_algorithms(True, warn_only=True)
+            torch.use_deterministic_algorithms(True, warn_only=True)
             # torch.backends.cudnn.deterministic = True
-            torch.use_deterministic_algorithms_if_available()
+            # torch.use_deterministic_algorithms_if_available()
             scaler.scale(loss).backward()
 
             # Optimize - https://pytorch.org/docs/master/notes/amp_examples.html
