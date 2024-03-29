@@ -1215,8 +1215,6 @@ class Classify(nn.Module):
 # ----------------------- Attention Mechanism ---------------------------
 
 ## CBAM ATTENTION
-torch.use_deterministic_algorithms(True, warn_only=True)
-
 class ChannelAttention(nn.Module):
 
     def __init__(self, in_planes, ratio=16):
