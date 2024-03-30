@@ -19,7 +19,7 @@ from utils.plots import feature_visualization
 from utils.torch_utils import (fuse_conv_and_bn, initialize_weights, model_info, profile, scale_img, select_device,
                                time_sync)
 from utils.tal.anchor_generator import make_anchors, dist2bbox
-from attention.blocks import *
+from models.attention.blocks import *
 try:
     import thop  # for FLOPs computation
 except ImportError:
