@@ -1,7 +1,7 @@
 # Shuffle 
 # CBAM
 # -- GAM ECA SE SK LSK
-from common import *
+from models.common import *
 
 class RepCBAM(nn.Module):
     # CSP Bottleneck with 3 convolutions
