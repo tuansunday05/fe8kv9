@@ -19,7 +19,7 @@ from utils.plots import feature_visualization
 from utils.torch_utils import (fuse_conv_and_bn, initialize_weights, model_info, profile, scale_img, select_device,
                                time_sync)
 from utils.tal.anchor_generator import make_anchors, dist2bbox
-
+from attention.blocks import *
 try:
     import thop  # for FLOPs computation
 except ImportError:
@@ -681,7 +681,8 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
         if m in {
             Conv, AConv, ConvTranspose, 
             Bottleneck, SPP, SPPF, DWConv, BottleneckCSP, nn.ConvTranspose2d, DWConvTranspose2d, SPPCSPC, ADown,
-            RepNCSPELAN4, SPPELAN, EfficientChannelAttention, ECABottleneck, CBAMBottleneck, CBAMC4, LSKAttention, RepCBAMELAN4}:
+            RepNCSPELAN4, SPPELAN, EfficientChannelAttention, ECABottleneck, CBAMBottleneck, CBAMC4, LSKAttention, 
+            RepNCBAMELAN4, SOCA}:
             c1, c2 = ch[f], args[0]
             if c2 != no:  # if not output
                 c2 = make_divisible(c2 * gw, 8)
@@ -733,7 +734,7 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--cfg', type=str, default='./detect/yolov9-e-9head-repcbamelan4.yaml', help='model.yaml')
+    parser.add_argument('--cfg', type=str, default='./detect/attention/yolov9-e-soca.yaml', help='model.yaml')
     parser.add_argument('--batch-size', type=int, default=1, help='total batch size for all GPUs')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--profile', action='store_true', help='profile model speed')
