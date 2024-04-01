@@ -415,7 +415,7 @@ class SABottleneck(nn.Module):
         self.downsample = None
         if stride != 1 or c1 != c2:
             self.downsample = nn.Sequential(
-                Conv(c1, c2, k=1, stride=stride, g=groups, act=False),
+                Conv(c1, c2, k=1, s=stride, g=groups, act=False),
                 nn.BatchNorm2d(c2)
             )
 
