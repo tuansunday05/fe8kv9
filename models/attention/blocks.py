@@ -3,7 +3,7 @@
 # -- GAM ECA SE SK LSK
 from models.common import *
 
-class RepCBAM(nn.Module):
+class RepNCBAM(nn.Module):
     # CSP Bottleneck with 3 convolutions
     def __init__(self, c1, c2, n=1, shortcut=True, g=1, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
         super().__init__()
@@ -12,6 +12,19 @@ class RepCBAM(nn.Module):
         self.cv2 = Conv(c1, c_, 1, 1)
         self.cv3 = Conv(2 * c_, c2, 1)  # optional act=FReLU(c2)
         self.m = nn.Sequential(*(CBAMBottleneck(c_, c_, shortcut, g, e=1.0) for _ in range(n)))
+
+    def forward(self, x):
+        return self.cv3(torch.cat((self.m(self.cv1(x)), self.cv2(x)), 1))
+    
+class RepNSA(nn.Module):
+    # CSP Bottleneck with 3 convolutions
+    def __init__(self, c1, c2, n=1, shortcut=True, groups=1, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
+        super().__init__()
+        c_ = int(c2 * e)  # hidden channels
+        self.cv1 = Conv(c1, c_, 1, 1)
+        self.cv2 = Conv(c1, c_, 1, 1)
+        self.cv3 = Conv(2 * c_, c2, 1)  # optional act=FReLU(c2)
+        self.m = nn.Sequential(*(SABottleneck(c_, c_, 1, groups, shortcut) for _ in range(n)))
 
     def forward(self, x):
         return self.cv3(torch.cat((self.m(self.cv1(x)), self.cv2(x)), 1))
@@ -123,8 +136,8 @@ class RepNCBAMELAN4(RepNCSPELAN4):
     # C3 module with CBAMBottleneck()
     def __init__(self, c1, c2, c3, c4, c5=1): 
         super().__init__(c1, c2, c3, c4, c5)
-        self.cv2 = nn.Sequential(RepCBAM(c3//2, c4, c5), Conv(c4, c4, 3, 1))
-        self.cv3 = nn.Sequential(RepCBAM(c4, c4, c5), Conv(c4, c4, 3, 1))
+        self.cv2 = nn.Sequential(RepNCBAM(c3//2, c4, c5), Conv(c4, c4, 3, 1))
+        self.cv3 = nn.Sequential(RepNCBAM(c4, c4, c5), Conv(c4, c4, 3, 1))
 
         # c_ = int(c2 * e)  # hidden channels
         # self.m = nn.Sequential(*(RepCBAM(c_, c_, shortcut) for _ in range(n)))
@@ -222,18 +235,17 @@ from torch.nn import init
 
 class ShuffleAttention(nn.Module):
 
-    def __init__(self, channel=512, out_channel=512, reduction=16,G=8):
+    def __init__(self, channel=512, reduction=16, G=8):
         super().__init__()
-        self.G=G
-        self.channel=channel
+        self.G = G
+        self.channel = channel
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
-        self.gn = nn.GroupNorm(channel // (2 * G), channel // (2 * G))
-        self.cweight = Parameter(torch.zeros(1, channel // (2 * G), 1, 1))
-        self.cbias = Parameter(torch.ones(1, channel // (2 * G), 1, 1))
-        self.sweight = Parameter(torch.zeros(1, channel // (2 * G), 1, 1))
-        self.sbias = Parameter(torch.ones(1, channel // (2 * G), 1, 1))
-        self.sigmoid=nn.Sigmoid()
-
+        self.gn = nn.GroupNorm(self.channel // (2 * self.G), self.channel // (2 * self.G))
+        self.cweight = Parameter(torch.zeros(1, self.channel // (2 * G), 1, 1))
+        self.cbias = Parameter(torch.ones(1, self.channel // (2 * self.G), 1, 1))
+        self.sweight = Parameter(torch.zeros(1, self.channel // (2 * self.G), 1, 1))
+        self.sbias = Parameter(torch.ones(1, self.channel // (2 * self.G), 1, 1))
+        self.sigmoid = nn.Sigmoid()
 
     def init_weights(self):
         for m in self.modules():
@@ -249,7 +261,6 @@ class ShuffleAttention(nn.Module):
                 if m.bias is not None:
                     init.constant_(m.bias, 0)
 
-
     @staticmethod
     def channel_shuffle(x, groups):
         b, c, h, w = x.shape
@@ -263,44 +274,46 @@ class ShuffleAttention(nn.Module):
 
     def forward(self, x):
         b, c, h, w = x.size()
-        #group into subfeatures
-        x=x.view(b*self.G,-1,h,w) #bs*G,c//G,h,w
+        # group into subfeatures
+        x = x.view(b * self.G, -1, h, w)  # bs*G,c//G,h,w
 
-        #channel_split
-        x_0,x_1=x.chunk(2,dim=1) #bs*G,c//(2*G),h,w
+        # channel_split
+        x_0, x_1 = x.chunk(2, dim=1)  # bs*G,c//(2*G),h,w
 
-        #channel attention
-        x_channel=self.avg_pool(x_0) #bs*G,c//(2*G),1,1
-        x_channel=self.cweight*x_channel+self.cbias #bs*G,c//(2*G),1,1
-        x_channel=x_0*self.sigmoid(x_channel)
+        # channel attention
+        x_channel = self.avg_pool(x_0)  # bs*G,c//(2*G),1,1
+        x_channel = self.cweight * x_channel + self.cbias  # bs*G,c//(2*G),1,1
+        x_channel = x_0 * self.sigmoid(x_channel)
 
-        #spatial attention
-        x_spatial=self.gn(x_1) #bs*G,c//(2*G),h,w
-        x_spatial=self.sweight*x_spatial+self.sbias #bs*G,c//(2*G),h,w
-        x_spatial=x_1*self.sigmoid(x_spatial) #bs*G,c//(2*G),h,w
+        # spatial attention
+        x_spatial = self.gn(x_1)  # bs*G,c//(2*G),h,w
+        x_spatial = self.sweight * x_spatial + self.sbias  # bs*G,c//(2*G),h,w
+        x_spatial = x_1 * self.sigmoid(x_spatial)  # bs*G,c//(2*G),h,w
 
         # concatenate along channel axis
-        out=torch.cat([x_channel,x_spatial],dim=1)  #bs*G,c//G,h,w
-        out=out.contiguous().view(b,-1,h,w)
+        out = torch.cat([x_channel, x_spatial], dim=1)  # bs*G,c//G,h,w
+        out = out.contiguous().view(b, -1, h, w)
 
         # channel shuffle
         out = self.channel_shuffle(out, 2)
         return out
+
     
 class SABottleneck(nn.Module):
-    def __init__(self, c1, c2, stride=1, groups=1, reduction=16, G=8):
+    def __init__(self, c1, c2, stride=1, groups=1, shortcut = True, reduction=16, G=8):
         super().__init__()
-        mid_channels = c2 // 2
-        self.conv1 = Conv(c1, mid_channels, kernel_size=1, groups=groups, act=True)
-        self.conv2 = Conv(mid_channels, mid_channels, kernel_size=3, stride=stride, padding=1, groups=groups, act=True)
-        self.conv3 = Conv(mid_channels, c2, kernel_size=1, groups=groups, act=False)
+        c__ = c2 // 2
+        self.conv1 = Conv(c1, c__, 1, 1)
+        self.conv2 = Conv(c__, c__, 3, stride, 1, groups)
+        self.conv3 = Conv(c__, c2, 1, 1, act=False)
         self.act = nn.SiLU()
 
-        self.shuffle_attention = ShuffleAttention(channel=c2, out_channel=c2, reduction=reduction, G=G)
+        self.shuffle_attention = ShuffleAttention(channel=c2, reduction=reduction, G=G)
         self.downsample = None
+        self.shortcut = shortcut
         if stride != 1 or c1 != c2:
             self.downsample = nn.Sequential(
-                Conv(c1, c2, kernel_size=1, stride=stride, act=False),
+                Conv(c1, c2, k=1, stride=stride, act=False),
                 nn.BatchNorm2d(c2)
             )
 
@@ -308,22 +321,26 @@ class SABottleneck(nn.Module):
         residual = x
 
         out = self.conv1(x)
-        out = self.act(out)
-
         out = self.conv2(out)
-        out = self.act(out)
-
         out = self.conv3(out)
 
         out += self.shuffle_attention(out)
 
         if self.downsample is not None:
             residual = self.downsample(x)
-
-        out += residual
+        if self.shortcut:
+            out += residual
         out = self.act(out)
 
         return out
+    
+class RepNSAELAN4(RepNCSPELAN4):
+    # C3 module with CBAMBottleneck()
+    def __init__(self, c1, c2, c3, c4, c5=1): 
+        super().__init__(c1, c2, c3, c4, c5)
+        self.cv2 = nn.Sequential(RepNSA(c3//2, c4, c5), Conv(c4, c4, 3, 1))
+        self.cv3 = nn.Sequential(RepNSA(c4, c4, c5), Conv(c4, c4, 3, 1))
+
 ## ECA
 class EfficientChannelAttention(nn.Module):           # Efficient Channel Attention module
     def __init__(self, c, b=1, gamma=2):
