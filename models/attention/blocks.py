@@ -583,7 +583,7 @@ class SOCA(nn.Module):
 
         self.conv_du = nn.Sequential(
             nn.Conv2d(c1, c1 // reduction, 1, padding=0, bias=True),
-            nn.SiLU(inplace=True),  # SiLU activation
+            nn.SiLU(),  # SiLU activation
             nn.Conv2d(c1 // reduction, c1, 1, padding=0, bias=True),
             nn.Sigmoid()
         )
