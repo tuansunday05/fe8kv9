@@ -58,11 +58,13 @@ backbone:
    [[11, 12, 13, 14, -1], 1, CBFuse, [[1, 1, 1, 1]]], # 18  
 
    # csp-elan block
-   [-1, 1, SOCA, [128]],  # 19
+   [-1, 1, RepNCSPELAN4, [256, 128, 64, 2]],  # 19
+
+   [-1, 1, SOCA, [256]],  # 20
 
 
    # avg-conv down fuse
-   [-1, 1, ADown, [256]],  # 20-P3/8
+  #  [-1, 1, ADown, [256]],  # 20-P3/8
    [[12, 13, 14, -1], 1, CBFuse, [[2, 2, 2]]], # 21  
 
    # csp-elan block
