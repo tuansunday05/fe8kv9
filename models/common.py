@@ -228,6 +228,19 @@ class DWConvTranspose2d(nn.ConvTranspose2d):
     def __init__(self, c1, c2, k=1, s=1, p1=0, p2=0):  # ch_in, ch_out, kernel, stride, padding, padding_out
         super().__init__(c1, c2, k, s, p1, p2, groups=math.gcd(c1, c2))
 
+class DWConvTranspose(nn.Module):
+    # Convolution transpose 2d layer
+    default_act = nn.SiLU()  # default activation
+
+    def __init__(self, c1, c2, k=2, s=2, p=0, bn=True, act=True):
+        super().__init__()
+        self.dwconv_transpose = DWConvTranspose2d(c1, c2, k, s, p)
+        self.bn = nn.BatchNorm2d(c2) if bn else nn.Identity()
+        self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
+
+    def forward(self, x):
+        return self.act(self.bn(self.dwconv_transpose(x)))
+
 
 class DFL(nn.Module):
     # DFL module
