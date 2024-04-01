@@ -448,13 +448,14 @@ class LSKBottleneck(nn.Module):
     # expansion = 4
     def __init__(self, c1, c2, stride=1, shortcut=True, groups=1):
         super(LSKBottleneck, self).__init__()
-        c_ = c2 // 2
-
-        self.conv1 = Conv(c1, c_, 1, 1)
-        self.conv2 = Conv(c_, c2, 3, 1, g=groups)
-        self.act = nn.SiLU()
-        self.lsk = LSKblock(c2)
+        c__ = c2 // 2
         self.shortcut = shortcut
+
+        self.conv1 = Conv(c1, c__, 1, 1, g= groups)
+        self.conv2 = Conv(c__, c__, 3, stride, 1, g= groups)
+        self.conv3 = Conv(c__, c2, 1, 1, g= groups, act=False)
+        self.act = nn.ReLU()
+        self.lsk = LSKblock(c2)
 
         self.downsample = None
         if stride != 1 or c1 != c2:
@@ -467,8 +468,10 @@ class LSKBottleneck(nn.Module):
 
     def forward(self, x):
         identity = x
-        x1 = self.conv2(self.conv1(x))
-        out = self.lsk(x1)*x1
+        out = self.conv1(x)
+        out = self.conv2(out)
+        out = self.conv3(out)
+        out = self.lsk(out)
 
         if self.downsample is not None:
             identity = self.downsample(x)
