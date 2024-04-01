@@ -559,15 +559,15 @@ def SqrtmLayer(var, iterN):
     return Sqrtm.apply(var, iterN)
 
 class SOCA(nn.Module):
-    # second-order Channel attention
-    def __init__(self, channel, out_channel, reduction=8):
+    # Second-order Channel Attention
+    def __init__(self, c1, c2, reduction=8):
         super(SOCA, self).__init__()
         self.max_pool = nn.MaxPool2d(kernel_size=2)
 
         self.conv_du = nn.Sequential(
-            nn.Conv2d(channel, channel // reduction, 1, padding=0, bias=True),
-            nn.SiLU(inplace=True), ## ReLu
-            nn.Conv2d(channel // reduction, channel, 1, padding=0, bias=True),
+            nn.Conv2d(c1, c1 // reduction, 1, padding=0, bias=True),
+            nn.SiLU(inplace=True),  # SiLU activation
+            nn.Conv2d(c1 // reduction, c1, 1, padding=0, bias=True),
             nn.Sigmoid()
         )
 
@@ -589,9 +589,9 @@ class SOCA(nn.Module):
             H = (h - h1) // 2
             W = (w - w1) // 2
             x_sub = x[:, :, H:(H + h1), W:(W + w1)]
-        cov_mat = CovpoolLayer(x_sub) # Global Covariance pooling layer
-        cov_mat_sqrt = SqrtmLayer(cov_mat,5) # Matrix square root layer( including pre-norm,Newton-Schulz iter. and post-com. with 5 iteration)
-        cov_mat_sum = torch.mean(cov_mat_sqrt,1)
-        cov_mat_sum = cov_mat_sum.view(batch_size,C,1,1)
+        cov_mat = CovpoolLayer(x_sub)  # Global Covariance pooling layer
+        cov_mat_sqrt = SqrtmLayer(cov_mat, 5)  # Matrix square root layer (including pre-norm, Newton-Schulz iter. and post-com. with 5 iterations)
+        cov_mat_sum = torch.mean(cov_mat_sqrt, 1)
+        cov_mat_sum = cov_mat_sum.view(batch_size, C, 1, 1)
         y_cov = self.conv_du(cov_mat_sum)
-        return y_cov*x
+        return y_cov * x
