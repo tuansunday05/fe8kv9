@@ -18,7 +18,7 @@ class RepNCBAM(nn.Module):
     
 class RepNSA(nn.Module):
     # CSP Bottleneck with 3 convolutions
-    def __init__(self, c1, c2, n=1, shortcut=True, groups=16, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
+    def __init__(self, c1, c2, n=1, shortcut=True, groups=1, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
         super().__init__()
         c_ = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, c_, 1, 1)
@@ -378,15 +378,14 @@ class sa_layer(nn.Module):
 
     def forward(self, x):
         b, c, h, w = x.shape
-
+        # group into subfeatures
         x = x.reshape(b * self.groups, -1, h, w)
+        # channel_split
         x_0, x_1 = x.chunk(2, dim=1)
-
         # channel attention
         xn = self.avg_pool(x_0)
         xn = self.cweight * xn + self.cbias
         xn = x_0 * self.sigmoid(xn)
-
         # spatial attention
         xs = self.gn(x_1)
         xs = self.sweight * xs + self.sbias
@@ -408,20 +407,11 @@ class SABottleneck(nn.Module):
         c__ = c2 // 2
         self.shortcut = shortcut
 
-        # width = int(c2 * (base_width / 256.)) * groups
-        # Both self.conv2 and self.downsample layers downsample the input when stride != 1
-        # self.conv1 = conv1x1(inplanes, width)
-        # self.bn1 = norm_layer(width)
-        # self.conv2 = conv3x3(width, width, stride, groups, dilation)
-        # self.bn2 = norm_layer(width)
-        # self.conv3 = conv1x1(width, planes)
         self.conv1 = Conv(c1, c__, 1, 1, g= groups)
         self.conv2 = Conv(c__, c__, 3, stride, 1, g= groups)
         self.conv3 = Conv(c__, c2, 1, 1, g= groups, act=False)
-        self.act = nn.SiLU()
-        # self.bn3 = norm_layer(planes)
+        self.act = nn.ReLU()
         self.sa = sa_layer(c2, groups)
-        # self.relu = nn.ReLU()
         self.downsample = None
         if stride != 1 or c1 != c2:
             self.downsample = nn.Sequential(
@@ -436,7 +426,6 @@ class SABottleneck(nn.Module):
         out = self.conv1(x)
         out = self.conv2(out)
         out = self.conv3(out)
-        # out = self.bn3(out)
         out = self.sa(out)
 
         if self.downsample is not None:
