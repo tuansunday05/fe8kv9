@@ -24,7 +24,7 @@ class RepNSA(nn.Module):
         self.cv1 = Conv(c1, c_, 1, 1)
         self.cv2 = Conv(c1, c_, 1, 1)
         self.cv3 = Conv(2 * c_, c2, 1)  # optional act=FReLU(c2)
-        self.m = nn.Sequential(*(SABottleneck(c_, c_, 1, groups, shortcut) for _ in range(n)))
+        self.m = nn.Sequential(*(SABottleneck(c_, c_, 1, groups =1) for _ in range(n)))
 
     def forward(self, x):
         return self.cv3(torch.cat((self.m(self.cv1(x)), self.cv2(x)), 1))
@@ -233,70 +233,70 @@ class SKAttention(nn.Module):
 from torch.nn.parameter import Parameter
 from torch.nn import init
 
-class ShuffleAttention(nn.Module):
+# class ShuffleAttention(nn.Module):
 
-    def __init__(self, channel=512, reduction=16, G=8):
-        super().__init__()
-        self.G = G
-        self.channel = channel
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)
-        self.gn = nn.GroupNorm(self.channel // (2 * self.G), self.channel // (2 * self.G))
-        self.cweight = Parameter(torch.zeros(1, self.channel // (2 * G), 1, 1))
-        self.cbias = Parameter(torch.ones(1, self.channel // (2 * self.G), 1, 1))
-        self.sweight = Parameter(torch.zeros(1, self.channel // (2 * self.G), 1, 1))
-        self.sbias = Parameter(torch.ones(1, self.channel // (2 * self.G), 1, 1))
-        self.sigmoid = nn.Sigmoid()
+#     def __init__(self, channel=512, reduction=16, G=8):
+#         super().__init__()
+#         self.G = G
+#         self.channel = channel
+#         self.avg_pool = nn.AdaptiveAvgPool2d(1)
+#         self.gn = nn.GroupNorm(self.channel // (2 * self.G), self.channel // (2 * self.G))
+#         self.cweight = Parameter(torch.zeros(1, self.channel // (2 * G), 1, 1))
+#         self.cbias = Parameter(torch.ones(1, self.channel // (2 * self.G), 1, 1))
+#         self.sweight = Parameter(torch.zeros(1, self.channel // (2 * self.G), 1, 1))
+#         self.sbias = Parameter(torch.ones(1, self.channel // (2 * self.G), 1, 1))
+#         self.sigmoid = nn.Sigmoid()
 
-    def init_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                init.kaiming_normal_(m.weight, mode='fan_out')
-                if m.bias is not None:
-                    init.constant_(m.bias, 0)
-            elif isinstance(m, nn.BatchNorm2d):
-                init.constant_(m.weight, 1)
-                init.constant_(m.bias, 0)
-            elif isinstance(m, nn.Linear):
-                init.normal_(m.weight, std=0.001)
-                if m.bias is not None:
-                    init.constant_(m.bias, 0)
+#     # def init_weights(self):
+#     #     for m in self.modules():
+#     #         if isinstance(m, nn.Conv2d):
+#     #             init.kaiming_normal_(m.weight, mode='fan_out')
+#     #             if m.bias is not None:
+#     #                 init.constant_(m.bias, 0)
+#     #         elif isinstance(m, nn.BatchNorm2d):
+#     #             init.constant_(m.weight, 1)
+#     #             init.constant_(m.bias, 0)
+#     #         elif isinstance(m, nn.Linear):
+#     #             init.normal_(m.weight, std=0.001)
+#     #             if m.bias is not None:
+#     #                 init.constant_(m.bias, 0)
 
-    @staticmethod
-    def channel_shuffle(x, groups):
-        b, c, h, w = x.shape
-        x = x.reshape(b, groups, -1, h, w)
-        x = x.permute(0, 2, 1, 3, 4)
+#     @staticmethod
+#     def channel_shuffle(x, groups):
+#         b, c, h, w = x.shape
+#         x = x.reshape(b, groups, -1, h, w)
+#         x = x.permute(0, 2, 1, 3, 4)
 
-        # flatten
-        x = x.reshape(b, -1, h, w)
+#         # flatten
+#         x = x.reshape(b, -1, h, w)
 
-        return x
+#         return x
 
-    def forward(self, x):
-        b, c, h, w = x.size()
-        # group into subfeatures
-        x = x.view(b * self.G, -1, h, w)  # bs*G,c//G,h,w
+#     def forward(self, x):
+#         b, c, h, w = x.size()
+#         # group into subfeatures
+#         x = x.view(b * self.G, -1, h, w)  # bs*G,c//G,h,w
 
-        # channel_split
-        x_0, x_1 = x.chunk(2, dim=1)  # bs*G,c//(2*G),h,w
+#         # channel_split
+#         x_0, x_1 = x.chunk(2, dim=1)  # bs*G,c//(2*G),h,w
 
-        # channel attention
-        x_channel = self.avg_pool(x_0)  # bs*G,c//(2*G),1,1
-        x_channel = self.cweight * x_channel + self.cbias  # bs*G,c//(2*G),1,1
-        x_channel = x_0 * self.sigmoid(x_channel)
+#         # channel attention
+#         x_channel = self.avg_pool(x_0)  # bs*G,c//(2*G),1,1
+#         x_channel = self.cweight * x_channel + self.cbias  # bs*G,c//(2*G),1,1
+#         x_channel = x_0 * self.sigmoid(x_channel)
 
-        # spatial attention
-        x_spatial = self.gn(x_1)  # bs*G,c//(2*G),h,w
-        x_spatial = self.sweight * x_spatial + self.sbias  # bs*G,c//(2*G),h,w
-        x_spatial = x_1 * self.sigmoid(x_spatial)  # bs*G,c//(2*G),h,w
+#         # spatial attention
+#         x_spatial = self.gn(x_1)  # bs*G,c//(2*G),h,w
+#         x_spatial = self.sweight * x_spatial + self.sbias  # bs*G,c//(2*G),h,w
+#         x_spatial = x_1 * self.sigmoid(x_spatial)  # bs*G,c//(2*G),h,w
 
-        # concatenate along channel axis
-        out = torch.cat([x_channel, x_spatial], dim=1)  # bs*G,c//G,h,w
-        out = out.contiguous().view(b, -1, h, w)
+#         # concatenate along channel axis
+#         out = torch.cat([x_channel, x_spatial], dim=1)  # bs*G,c//G,h,w
+#         out = out.contiguous().view(b, -1, h, w)
 
-        # channel shuffle
-        out = self.channel_shuffle(out, 2)
-        return out
+#         # channel shuffle
+#         out = self.channel_shuffle(out, 2)
+#         return out
 
     
 class SABottleneck(nn.Module):
@@ -308,7 +308,7 @@ class SABottleneck(nn.Module):
         self.conv3 = Conv(c__, c2, 1, 1, act=False)
         self.act = nn.SiLU()
 
-        self.shuffle_attention = ShuffleAttention(channel=c2, reduction=reduction, G=G)
+        self.shuffle_attention = sa_layer(channel=c2, groups=G)
         self.downsample = None
         self.shortcut = shortcut
         if stride != 1 or c1 != c2:
@@ -333,7 +333,116 @@ class SABottleneck(nn.Module):
         out = self.act(out)
 
         return out
-    
+
+def conv1x1(in_planes, out_planes, stride=1):
+    """1x1 convolution"""
+    return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
+
+def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
+    """3x3 convolution with padding"""
+    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
+                     padding=dilation, groups=groups, bias=False, dilation=dilation)
+
+class sa_layer(nn.Module):
+    """Constructs a Channel Spatial Group module.
+
+    Args:
+        k_size: Adaptive selection of kernel size
+    """
+
+    def __init__(self, channel, groups=64):
+        super(sa_layer, self).__init__()
+        self.groups = groups
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.cweight = Parameter(torch.zeros(1, channel // (2 * groups), 1, 1))
+        self.cbias = Parameter(torch.ones(1, channel // (2 * groups), 1, 1))
+        self.sweight = Parameter(torch.zeros(1, channel // (2 * groups), 1, 1))
+        self.sbias = Parameter(torch.ones(1, channel // (2 * groups), 1, 1))
+
+        self.sigmoid = nn.Sigmoid()
+        self.gn = nn.GroupNorm(channel // (2 * groups), channel // (2 * groups))
+
+    @staticmethod
+    def channel_shuffle(x, groups):
+        b, c, h, w = x.shape
+
+        x = x.reshape(b, groups, -1, h, w)
+        x = x.permute(0, 2, 1, 3, 4)
+
+        # flatten
+        x = x.reshape(b, -1, h, w)
+
+        return x
+
+    def forward(self, x):
+        b, c, h, w = x.shape
+
+        x = x.reshape(b * self.groups, -1, h, w)
+        x_0, x_1 = x.chunk(2, dim=1)
+
+        # channel attention
+        xn = self.avg_pool(x_0)
+        xn = self.cweight * xn + self.cbias
+        xn = x_0 * self.sigmoid(xn)
+
+        # spatial attention
+        xs = self.gn(x_1)
+        xs = self.sweight * xs + self.sbias
+        xs = x_1 * self.sigmoid(xs)
+
+        # concatenate along channel axis
+        out = torch.cat([xn, xs], dim=1)
+        out = out.reshape(b, -1, h, w)
+
+        out = self.channel_shuffle(out, 2)
+        return out
+
+
+# class SABottleneck(nn.Module):
+#     expansion = 4
+#     __constants__ = ['downsample']
+
+#     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
+#                  base_width=64, dilation=1, norm_layer=None):
+#         super(SABottleneck, self).__init__()
+#         if norm_layer is None:
+#             norm_layer = nn.BatchNorm2d
+#         width = int(planes * (base_width / 64.)) * groups
+#         # Both self.conv2 and self.downsample layers downsample the input when stride != 1
+#         self.conv1 = conv1x1(inplanes, width)
+#         self.bn1 = norm_layer(width)
+#         self.conv2 = conv3x3(width, width, stride, groups, dilation)
+#         self.bn2 = norm_layer(width)
+#         self.conv3 = conv1x1(width, planes * self.expansion)
+#         self.bn3 = norm_layer(planes * self.expansion)
+#         self.sa = sa_layer(planes*4, 8)
+#         self.relu = nn.ReLU(inplace=True)
+#         self.downsample = downsample
+#         self.stride = stride
+
+#     def forward(self, x):
+#         identity = x
+
+#         out = self.conv1(x)
+#         out = self.bn1(out)
+#         out = self.relu(out)
+
+#         out = self.conv2(out)
+#         out = self.bn2(out)
+#         out = self.relu(out)
+
+#         out = self.conv3(out)
+#         out = self.bn3(out)
+#         out = self.sa(out)
+
+#         if self.downsample is not None:
+#             identity = self.downsample(x)
+
+#         out += identity
+#         out = self.relu(out)
+
+#         return out
+
 class RepNSAELAN4(RepNCSPELAN4):
     # C3 module with CBAMBottleneck()
     def __init__(self, c1, c2, c3, c4, c5=1): 
