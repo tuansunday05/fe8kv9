@@ -407,7 +407,7 @@ class SABottleneck(nn.Module):
         super(SABottleneck, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
-        width = int(planes * (base_width / 64.)) * groups
+        width = int(planes * (base_width / 256.)) * groups
         # Both self.conv2 and self.downsample layers downsample the input when stride != 1
         self.conv1 = conv1x1(inplanes, width)
         self.bn1 = norm_layer(width)
@@ -416,7 +416,7 @@ class SABottleneck(nn.Module):
         self.conv3 = conv1x1(width, planes)
         self.bn3 = norm_layer(planes)
         self.sa = sa_layer(planes, 8)
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = nn.ReLU()
         self.downsample = downsample
         self.stride = stride
 
