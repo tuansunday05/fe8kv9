@@ -320,9 +320,8 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                     loss *= 4.
 
             # Backward
-            with torch.autograd.set_detect_anomaly(True):
-                torch.use_deterministic_algorithms(True, warn_only=True)
-                scaler.scale(loss).backward()
+            torch.use_deterministic_algorithms(True, warn_only=True)
+            scaler.scale(loss).backward()
 
             # Optimize - https://pytorch.org/docs/master/notes/amp_examples.html
             if ni - last_opt_step >= accumulate:
