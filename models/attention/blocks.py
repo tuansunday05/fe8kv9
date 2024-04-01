@@ -57,7 +57,7 @@ class SpatialAttention(nn.Module):
         assert kernel_size in (3, 7), 'kernel size must be 3 or 7'
         padding = 3 if kernel_size == 7 else 1
         self.conv = nn.Conv2d(2, 1, kernel_size, padding=padding, bias=False)
-        self.sigmoid = nn.Sigmoid()
+        self.sigmoid = torch.sigmoid()
 
     def forward(self, x):
         # 1*h*w
