@@ -285,6 +285,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
         if RANK in {-1, 0}:
             pbar = tqdm(pbar, total=nb, bar_format=TQDM_BAR_FORMAT)  # progress bar
         optimizer.zero_grad()
+
         for i, (imgs, targets, paths, _) in pbar:  # batch -------------------------------------------------------------
             callbacks.run('on_train_batch_start')
             ni = i + nb * epoch  # number integrated batches (since train start)
@@ -319,8 +320,9 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                     loss *= 4.
 
             # Backward
-            torch.use_deterministic_algorithms(True, warn_only=True)
-            scaler.scale(loss).backward()
+            with torch.autograd.set_detect_anomaly(True):
+                torch.use_deterministic_algorithms(True, warn_only=True)
+                scaler.scale(loss).backward()
 
             # Optimize - https://pytorch.org/docs/master/notes/amp_examples.html
             if ni - last_opt_step >= accumulate:
