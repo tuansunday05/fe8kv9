@@ -25,13 +25,14 @@ class ChannelAttention(nn.Module):
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.max_pool = nn.AdaptiveMaxPool2d(1)
         self.f1 = nn.Conv2d(in_planes, in_planes // ratio, 1, bias=False)
-        self.relu = nn.ReLU()
+        self.act = nn.SiLU()
+
         self.f2 = nn.Conv2d(in_planes // ratio, in_planes, 1, bias=False)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        avg_out = self.f2(self.relu(self.f1(self.avg_pool(x))))
-        max_out = self.f2(self.relu(self.f1(self.max_pool(x))))
+        avg_out = self.f2(self.act(self.f1(self.avg_pool(x))))
+        max_out = self.f2(self.act(self.f1(self.max_pool(x))))
         out = self.sigmoid(avg_out + max_out)
         return out
 
@@ -285,7 +286,44 @@ class ShuffleAttention(nn.Module):
         # channel shuffle
         out = self.channel_shuffle(out, 2)
         return out
+    
+class SABottleneck(nn.Module):
+    def __init__(self, c1, c2, stride=1, groups=1, reduction=16, G=8):
+        super().__init__()
+        mid_channels = c2 // 2
+        self.conv1 = Conv(c1, mid_channels, kernel_size=1, groups=groups, act=True)
+        self.conv2 = Conv(mid_channels, mid_channels, kernel_size=3, stride=stride, padding=1, groups=groups, act=True)
+        self.conv3 = Conv(mid_channels, c2, kernel_size=1, groups=groups, act=False)
+        self.act = nn.SiLU()
 
+        self.shuffle_attention = ShuffleAttention(channel=c2, out_channel=c2, reduction=reduction, G=G)
+        self.downsample = None
+        if stride != 1 or c1 != c2:
+            self.downsample = nn.Sequential(
+                Conv(c1, c2, kernel_size=1, stride=stride, act=False),
+                nn.BatchNorm2d(c2)
+            )
+
+    def forward(self, x):
+        residual = x
+
+        out = self.conv1(x)
+        out = self.act(out)
+
+        out = self.conv2(out)
+        out = self.act(out)
+
+        out = self.conv3(out)
+
+        out += self.shuffle_attention(out)
+
+        if self.downsample is not None:
+            residual = self.downsample(x)
+
+        out += residual
+        out = self.act(out)
+
+        return out
 ## ECA
 class EfficientChannelAttention(nn.Module):           # Efficient Channel Attention module
     def __init__(self, c, b=1, gamma=2):
@@ -528,7 +566,7 @@ class SOCA(nn.Module):
 
         self.conv_du = nn.Sequential(
             nn.Conv2d(channel, channel // reduction, 1, padding=0, bias=True),
-            nn.ReLU(inplace=True),
+            nn.SiLU(inplace=True), ## ReLu
             nn.Conv2d(channel // reduction, channel, 1, padding=0, bias=True),
             nn.Sigmoid()
         )
