@@ -24,7 +24,7 @@ class RepNSA(nn.Module):
         self.cv1 = Conv(c1, c_, 1, 1)
         self.cv2 = Conv(c1, c_, 1, 1)
         self.cv3 = Conv(2 * c_, c2, 1)  # optional act=FReLU(c2)
-        self.m = nn.Sequential(*(SABottleneck(c_, c_, 1, groups =1) for _ in range(n)))
+        self.m = nn.Sequential(*(SABottleneck(c_, c_, 1, groups =8) for _ in range(n)))
 
     def forward(self, x):
         return self.cv3(torch.cat((self.m(self.cv1(x)), self.cv2(x)), 1))
@@ -299,40 +299,40 @@ from torch.nn import init
 #         return out
 
     
-class SABottleneck(nn.Module):
-    def __init__(self, c1, c2, stride=1, groups=1, shortcut = True, reduction=16, G=8):
-        super().__init__()
-        c__ = c2 // 2
-        self.conv1 = Conv(c1, c__, 1, 1)
-        self.conv2 = Conv(c__, c__, 3, stride, 1, groups)
-        self.conv3 = Conv(c__, c2, 1, 1, act=False)
-        self.act = nn.SiLU()
+# class SABottleneck(nn.Module):
+#     def __init__(self, c1, c2, stride=1, groups=1, shortcut = True, reduction=16, G=8):
+#         super().__init__()
+#         c__ = c2 // 2
+#         self.conv1 = Conv(c1, c__, 1, 1)
+#         self.conv2 = Conv(c__, c__, 3, stride, 1, groups)
+#         self.conv3 = Conv(c__, c2, 1, 1, act=False)
+#         self.act = nn.SiLU()
 
-        self.shuffle_attention = sa_layer(channel=c2, groups=G)
-        self.downsample = None
-        self.shortcut = shortcut
-        if stride != 1 or c1 != c2:
-            self.downsample = nn.Sequential(
-                Conv(c1, c2, k=1, stride=stride, act=False),
-                nn.BatchNorm2d(c2)
-            )
+#         self.shuffle_attention = sa_layer(channel=c2, groups=G)
+#         self.downsample = None
+#         self.shortcut = shortcut
+#         if stride != 1 or c1 != c2:
+#             self.downsample = nn.Sequential(
+#                 Conv(c1, c2, k=1, stride=stride, act=False),
+#                 nn.BatchNorm2d(c2)
+#             )
 
-    def forward(self, x):
-        residual = x
+#     def forward(self, x):
+#         residual = x
 
-        out = self.conv1(x)
-        out = self.conv2(out)
-        out = self.conv3(out)
+#         out = self.conv1(x)
+#         out = self.conv2(out)
+#         out = self.conv3(out)
 
-        out += self.shuffle_attention(out)
+#         out += self.shuffle_attention(out)
 
-        if self.downsample is not None:
-            residual = self.downsample(x)
-        if self.shortcut:
-            out += residual
-        out = self.act(out)
+#         if self.downsample is not None:
+#             residual = self.downsample(x)
+#         if self.shortcut:
+#             out += residual
+#         out = self.act(out)
 
-        return out
+#         return out
 
 def conv1x1(in_planes, out_planes, stride=1):
     """1x1 convolution"""
@@ -398,50 +398,50 @@ class sa_layer(nn.Module):
         return out
 
 
-# class SABottleneck(nn.Module):
-#     expansion = 4
-#     __constants__ = ['downsample']
+class SABottleneck(nn.Module):
+    expansion = 4
+    __constants__ = ['downsample']
 
-#     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
-#                  base_width=64, dilation=1, norm_layer=None):
-#         super(SABottleneck, self).__init__()
-#         if norm_layer is None:
-#             norm_layer = nn.BatchNorm2d
-#         width = int(planes * (base_width / 64.)) * groups
-#         # Both self.conv2 and self.downsample layers downsample the input when stride != 1
-#         self.conv1 = conv1x1(inplanes, width)
-#         self.bn1 = norm_layer(width)
-#         self.conv2 = conv3x3(width, width, stride, groups, dilation)
-#         self.bn2 = norm_layer(width)
-#         self.conv3 = conv1x1(width, planes * self.expansion)
-#         self.bn3 = norm_layer(planes * self.expansion)
-#         self.sa = sa_layer(planes*4, 8)
-#         self.relu = nn.ReLU(inplace=True)
-#         self.downsample = downsample
-#         self.stride = stride
+    def __init__(self, inplanes, planes, stride=1, downsample=None, groups=8,
+                 base_width=64, dilation=1, norm_layer=None):
+        super(SABottleneck, self).__init__()
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+        width = int(planes * (base_width / 64.)) * groups
+        # Both self.conv2 and self.downsample layers downsample the input when stride != 1
+        self.conv1 = conv1x1(inplanes, width)
+        self.bn1 = norm_layer(width)
+        self.conv2 = conv3x3(width, width, stride, groups, dilation)
+        self.bn2 = norm_layer(width)
+        self.conv3 = conv1x1(width, planes)
+        self.bn3 = norm_layer(planes)
+        self.sa = sa_layer(planes, 8)
+        self.relu = nn.ReLU(inplace=True)
+        self.downsample = downsample
+        self.stride = stride
 
-#     def forward(self, x):
-#         identity = x
+    def forward(self, x):
+        identity = x
 
-#         out = self.conv1(x)
-#         out = self.bn1(out)
-#         out = self.relu(out)
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
 
-#         out = self.conv2(out)
-#         out = self.bn2(out)
-#         out = self.relu(out)
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out = self.relu(out)
 
-#         out = self.conv3(out)
-#         out = self.bn3(out)
-#         out = self.sa(out)
+        out = self.conv3(out)
+        out = self.bn3(out)
+        out = self.sa(out)
 
-#         if self.downsample is not None:
-#             identity = self.downsample(x)
+        if self.downsample is not None:
+            identity = self.downsample(x)
 
-#         out += identity
-#         out = self.relu(out)
+        out += identity
+        out = self.relu(out)
 
-#         return out
+        return out
 
 class RepNSAELAN4(RepNCSPELAN4):
     # C3 module with CBAMBottleneck()
