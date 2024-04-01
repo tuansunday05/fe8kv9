@@ -18,7 +18,7 @@ class RepNCBAM(nn.Module):
     
 class RepNSA(nn.Module):
     # CSP Bottleneck with 3 convolutions
-    def __init__(self, c1, c2, n=1, shortcut=True, groups=8, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
+    def __init__(self, c1, c2, n=1, shortcut=True, groups=16, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
         super().__init__()
         c_ = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, c_, 1, 1)
@@ -350,17 +350,19 @@ class sa_layer(nn.Module):
         k_size: Adaptive selection of kernel size
     """
 
-    def __init__(self, channel, groups=64):
+    def __init__(self, channel, groups=16):
         super(sa_layer, self).__init__()
         self.groups = groups
+        self.channel = channel
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
-        self.cweight = Parameter(torch.zeros(1, channel // (2 * groups), 1, 1))
-        self.cbias = Parameter(torch.ones(1, channel // (2 * groups), 1, 1))
-        self.sweight = Parameter(torch.zeros(1, channel // (2 * groups), 1, 1))
-        self.sbias = Parameter(torch.ones(1, channel // (2 * groups), 1, 1))
+        self.gn = nn.GroupNorm(self.channel // (2 * self.groups), self.channel // (2 * self.groups))
+        self.cweight = Parameter(torch.zeros(1, self.channel // (2 * self.groups), 1, 1))
+        self.cbias = Parameter(torch.ones(1, self.channel // (2 * self.groups), 1, 1))
+        self.sweight = Parameter(torch.zeros(1, self.channel // (2 * self.groups), 1, 1))
+        self.sbias = Parameter(torch.ones(1, self.channel // (2 * self.groups), 1, 1))
 
         self.sigmoid = nn.Sigmoid()
-        self.gn = nn.GroupNorm(channel // (2 * groups), channel // (2 * groups))
+        self.gn = nn.GroupNorm(self.channel // (2 * self.groups), self.channel // (2 * self.groups))
 
     @staticmethod
     def channel_shuffle(x, groups):
@@ -400,11 +402,9 @@ class sa_layer(nn.Module):
 
 class SABottleneck(nn.Module):
     # expansion = 4
-    def __init__(self, c1, c2, stride=1, shortcut=True, groups=8,
-                 base_width=64, dilation=1, norm_layer=None):
+    def __init__(self, c1, c2, stride=1, shortcut=True, groups=16,
+                norm_layer=None):
         super(SABottleneck, self).__init__()
-        if norm_layer is None:
-            norm_layer = nn.BatchNorm2d
         c__ = c2 // 2
         self.shortcut = shortcut
 
@@ -420,7 +420,7 @@ class SABottleneck(nn.Module):
         self.conv3 = Conv(c__, c2, 1, 1, g= groups, act=False)
         self.act = nn.SiLU()
         # self.bn3 = norm_layer(planes)
-        self.sa = sa_layer(c2, 8)
+        self.sa = sa_layer(c2, groups)
         # self.relu = nn.ReLU()
         self.downsample = None
         if stride != 1 or c1 != c2:
