@@ -28,6 +28,19 @@ class RepNSA(nn.Module):
 
     def forward(self, x):
         return self.cv3(torch.cat((self.m(self.cv1(x)), self.cv2(x)), 1))
+    
+class RepNLSK(nn.Module):
+    # CSP Bottleneck with 3 convolutions
+    def __init__(self, c1, c2, n=1, shortcut=True, groups=1, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
+        super().__init__()
+        c_ = int(c2 * e)  # hidden channels
+        self.cv1 = Conv(c1, c_, 1, 1)
+        self.cv2 = Conv(c1, c_, 1, 1)
+        self.cv3 = Conv(2 * c_, c2, 1)  # optional act=FReLU(c2)
+        self.m = nn.Sequential(*(LSKBottleneck(c_, c_, 1, shortcut, groups=groups) for _ in range(n)))
+
+    def forward(self, x):
+        return self.cv3(torch.cat((self.m(self.cv1(x)), self.cv2(x)), 1))
 # ----------------------- Attention Mechanism ---------------------------
 
 ## CBAM ATTENTION
@@ -182,166 +195,56 @@ def channel_shuffle(x, groups=2):
 
 ## SK ATTENTION
 
-# class SKAttention(nn.Module):
+class SKAttention(nn.Module):
 
-#     def __init__(self, channel=512,out_channel=512,kernels=[1,3,5,7],reduction=16,group=1,L=32):
-#         super().__init__()
-#         self.d=max(L,channel//reduction)
-#         self.convs=nn.ModuleList([])
-#         for k in kernels:
-#             self.convs.append(
-#                 nn.Sequential(OrderedDict([
-#                     ('conv',nn.Conv2d(channel,channel,kernel_size=k,padding=k//2,groups=group)),
-#                     ('bn',nn.BatchNorm2d(channel)),
-#                     ('relu',nn.ReLU())
-#                 ]))
-#             )
-#         self.fc=nn.Linear(channel,self.d)
-#         self.fcs=nn.ModuleList([])
-#         for i in range(len(kernels)):
-#             self.fcs.append(nn.Linear(self.d,channel))
-#         self.softmax=nn.Softmax(dim=0)
+    def __init__(self, channel=512,out_channel=512,kernels=[1,3,5,7],reduction=16,group=1,L=32):
+        super().__init__()
+        self.d=max(L,channel//reduction)
+        self.convs=nn.ModuleList([])
+        for k in kernels:
+            self.convs.append(
+                nn.Sequential(OrderedDict([
+                    ('conv',nn.Conv2d(channel,channel,kernel_size=k,padding=k//2,groups=group)),
+                    ('bn',nn.BatchNorm2d(channel)),
+                    ('relu',nn.ReLU())
+                ]))
+            )
+        self.fc=nn.Linear(channel,self.d)
+        self.fcs=nn.ModuleList([])
+        for i in range(len(kernels)):
+            self.fcs.append(nn.Linear(self.d,channel))
+        self.softmax=nn.Softmax(dim=0)
 
-#     def forward(self, x):
-#         bs, c, _, _ = x.size()
-#         conv_outs=[]
-#         ### split
-#         for conv in self.convs:
-#             conv_outs.append(conv(x))
-#         feats=torch.stack(conv_outs,0)#k,bs,channel,h,w
+    def forward(self, x):
+        bs, c, _, _ = x.size()
+        conv_outs=[]
+        ### split
+        for conv in self.convs:
+            conv_outs.append(conv(x))
+        feats=torch.stack(conv_outs,0)#k,bs,channel,h,w
 
-#         ### fuse
-#         U=sum(conv_outs) #bs,c,h,w
+        ### fuse
+        U=sum(conv_outs) #bs,c,h,w
 
-#         ### reduction channel
-#         S=U.mean(-1).mean(-1) #bs,c
-#         Z=self.fc(S) #bs,d
+        ### reduction channel
+        S=U.mean(-1).mean(-1) #bs,c
+        Z=self.fc(S) #bs,d
 
-#         ### calculate attention weight
-#         weights=[]
-#         for fc in self.fcs:
-#             weight=fc(Z)
-#             weights.append(weight.view(bs,c,1,1)) #bs,channel
-#         attention_weughts=torch.stack(weights,0)#k,bs,channel,1,1
-#         attention_weughts=self.softmax(attention_weughts)#k,bs,channel,1,1
+        ### calculate attention weight
+        weights=[]
+        for fc in self.fcs:
+            weight=fc(Z)
+            weights.append(weight.view(bs,c,1,1)) #bs,channel
+        attention_weughts=torch.stack(weights,0)#k,bs,channel,1,1
+        attention_weughts=self.softmax(attention_weughts)#k,bs,channel,1,1
 
-#         ### fuse
-#         V=(attention_weughts*feats).sum(0)
-#         return V
+        ### fuse
+        V=(attention_weughts*feats).sum(0)
+        return V
     
 ## SHUFFLE ATTENTION
 from torch.nn.parameter import Parameter
 from torch.nn import init
-
-# class ShuffleAttention(nn.Module):
-
-#     def __init__(self, channel=512, reduction=16, G=8):
-#         super().__init__()
-#         self.G = G
-#         self.channel = channel
-#         self.avg_pool = nn.AdaptiveAvgPool2d(1)
-#         self.gn = nn.GroupNorm(self.channel // (2 * self.G), self.channel // (2 * self.G))
-#         self.cweight = Parameter(torch.zeros(1, self.channel // (2 * G), 1, 1))
-#         self.cbias = Parameter(torch.ones(1, self.channel // (2 * self.G), 1, 1))
-#         self.sweight = Parameter(torch.zeros(1, self.channel // (2 * self.G), 1, 1))
-#         self.sbias = Parameter(torch.ones(1, self.channel // (2 * self.G), 1, 1))
-#         self.sigmoid = nn.Sigmoid()
-
-#     def init_weights(self):
-#         for m in self.modules():
-#             if isinstance(m, nn.Conv2d):
-#                 init.kaiming_normal_(m.weight, mode='fan_out')
-#                 if m.bias is not None:
-#                     init.constant_(m.bias, 0)
-#             elif isinstance(m, nn.BatchNorm2d):
-#                 init.constant_(m.weight, 1)
-#                 init.constant_(m.bias, 0)
-#             elif isinstance(m, nn.Linear):
-#                 init.normal_(m.weight, std=0.001)
-#                 if m.bias is not None:
-#                     init.constant_(m.bias, 0)
-
-#     @staticmethod
-#     def channel_shuffle(x, groups):
-#         b, c, h, w = x.shape
-#         x = x.reshape(b, groups, -1, h, w)
-#         x = x.permute(0, 2, 1, 3, 4)
-
-#         # flatten
-#         x = x.reshape(b, -1, h, w)
-
-#         return x
-
-#     def forward(self, x):
-#         b, c, h, w = x.size()
-#         # group into subfeatures
-#         x = x.reshape(b * self.G, -1, h, w)  # bs*G,c//G,h,w
-
-#         # channel_split
-#         x_0, x_1 = x.chunk(2, dim=1)  # bs*G,c//(2*G),h,w
-
-#         # channel attention
-#         x_channel = self.avg_pool(x_0)  # bs*G,c//(2*G),1,1
-#         x_channel = self.cweight * x_channel + self.cbias  # bs*G,c//(2*G),1,1
-#         x_channel = x_0 * self.sigmoid(x_channel)
-
-#         # spatial attention
-#         x_spatial = self.gn(x_1)  # bs*G,c//(2*G),h,w
-#         x_spatial = self.sweight * x_spatial + self.sbias  # bs*G,c//(2*G),h,w
-#         x_spatial = x_1 * self.sigmoid(x_spatial)  # bs*G,c//(2*G),h,w
-
-#         # concatenate along channel axis
-#         out = torch.cat([x_channel, x_spatial], dim=1)  # bs*G,c//G,h,w
-#         out = out.contiguous().reshape(b, -1, h, w)
-
-#         # channel shuffle
-#         out = self.channel_shuffle(out, 2)
-#         return out
-
-    
-# class SABottleneck(nn.Module):
-#     def __init__(self, c1, c2, stride=1, shortcut = True, reduction=16, groups=8):
-#         super().__init__()
-#         c__ = c2 // 2
-#         self.conv1 = Conv(c1, c__, 1, 1, g= groups)
-#         self.conv2 = Conv(c__, c__, 3, stride, 1, g= groups)
-#         self.conv3 = Conv(c__, c2, 1, 1, g= groups, act=False)
-#         self.act = nn.SiLU()
-
-#         self.shuffle_attention = ShuffleAttention(channel=c2, G=groups)
-#         self.downsample = None
-#         self.shortcut = shortcut
-#         if stride != 1 or c1 != c2:
-#             self.downsample = nn.Sequential(
-#                 Conv(c1, c2, k=1, stride=stride, g=groups, act=False),
-#                 nn.BatchNorm2d(c2)
-#             )
-
-#     def forward(self, x):
-#         residual = x
-
-#         out = self.conv1(x)
-#         out = self.conv2(out)
-#         out = self.conv3(out)
-
-#         out += self.shuffle_attention(out)
-
-#         if self.downsample is not None:
-#             residual = self.downsample(x)
-#         if self.shortcut:
-#             out += residual
-#         out = self.act(out)
-
-#         return out
-
-# def conv1x1(in_planes, out_planes, stride=1):
-#     """1x1 convolution"""
-#     return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
-
-# def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
-#     """3x3 convolution with padding"""
-#     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
-#                      padding=dilation, groups=groups, bias=False, dilation=dilation)
 
 class sa_layer(nn.Module):
     """Constructs a Channel Spatial Group module.
@@ -541,7 +444,46 @@ class LSKAttention(nn.Module):
         x = self.proj_3(x)
         return x
 
+class LSKBottleneck(nn.Module):
+    # expansion = 4
+    def __init__(self, c1, c2, stride=1, shortcut=True, groups=1):
+        super(LSKBottleneck, self).__init__()
+        c_ = c2 // 2
 
+        self.conv1 = Conv(c1, c_, 1, 1)
+        self.conv2 = Conv(c_, c2, 3, 1, g=groups)
+        self.act = nn.SiLU()
+        self.lsk = LSKblock(c2)
+        self.shortcut = shortcut
+
+        self.downsample = None
+        if stride != 1 or c1 != c2:
+            self.downsample = nn.Sequential(
+                Conv(c1, c2, k=1, s=stride, g=groups, act=False),
+                nn.BatchNorm2d(c2)
+            )
+
+        self.stride = stride
+
+    def forward(self, x):
+        identity = x
+        x1 = self.conv2(self.conv1(x))
+        out = self.lsk(x1)*x1
+
+        if self.downsample is not None:
+            identity = self.downsample(x)
+
+        if self.shortcut:
+            out += identity
+        out = self.act(out)
+        return out
+
+class RepNLSKLAN4(RepNCSPELAN4):
+    # C3 module with CBAMBottleneck()
+    def __init__(self, c1, c2, c3, c4, c5=1): 
+        super().__init__(c1, c2, c3, c4, c5)
+        self.cv2 = nn.Sequential(RepNLSK(c3//2, c4, c5), Conv(c4, c4, 3, 1))
+        self.cv3 = nn.Sequential(RepNLSK(c4, c4, c5), Conv(c4, c4, 3, 1))
 
 ## SE Attention
 class SEBottleneck(nn.Module):
