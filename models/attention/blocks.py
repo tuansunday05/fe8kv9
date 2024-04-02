@@ -18,13 +18,13 @@ class RepNCBAM(nn.Module):
     
 class RepNSA(nn.Module):
     # CSP Bottleneck with 3 convolutions
-    def __init__(self, c1, c2, n=1, shortcut=True, groups=1, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
+    def __init__(self, c1, c2, n=1, shortcut=True, g=16, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
         super().__init__()
         c_ = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, c_, 1, 1)
         self.cv2 = Conv(c1, c_, 1, 1)
         self.cv3 = Conv(2 * c_, c2, 1)  # optional act=FReLU(c2)
-        self.m = nn.Sequential(*(SABottleneck(c_, c_, 1, shortcut, groups=groups) for _ in range(n)))
+        self.m = nn.Sequential(*(SABottleneck(c_, c_, 1, shortcut, g=g) for _ in range(n)))
 
     def forward(self, x):
         return self.cv3(torch.cat((self.m(self.cv1(x)), self.cv2(x)), 1))
@@ -83,7 +83,6 @@ class SpatialAttention(nn.Module):
         return self.sigmoid(x)
     
 class CBAMBottleneck(nn.Module):
-    # Standard bottleneck
     def __init__(self,
                  c1,
                  c2,
@@ -304,43 +303,24 @@ class sa_layer(nn.Module):
 
 class SABottleneck(nn.Module):
     # expansion = 4
-    def __init__(self, c1, c2, stride=1, shortcut=True, groups=16,
-                norm_layer=None):
+    def __init__(self, c1, c2, s=1, shortcut=True, k=(1, 3), e=0.5, g=1):
         super(SABottleneck, self).__init__()
-        c__ = c2 // 2
+        c_ = c2 // 2
         self.shortcut = shortcut
 
-        self.conv1 = Conv(c1, c__, 1, 1, g= groups)
-        self.conv2 = Conv(c__, c__, 3, stride, 1, g= groups)
-        self.conv3 = Conv(c__, c2, 1, 1, g= groups, act=False)
-        self.act = nn.ReLU()
-        self.sa = sa_layer(c2, groups)
-        self.downsample = None
-        if stride != 1 or c1 != c2:
-            self.downsample = nn.Sequential(
-                Conv(c1, c2, k=1, s=stride, g=groups, act=False),
-                nn.BatchNorm2d(c2)
-            )
-
-        self.stride = stride
+        self.conv1 = Conv(c1, c_, k[0], s)
+        self.conv2 = Conv(c_, c2, k[1], s, g=g)
+        self.add = shortcut and c1 == c2
+        self.sa = sa_layer(c2, g)
 
     def forward(self, x):
-        identity = x
-        out = self.conv1(x)
-        out = self.conv2(out)
-        out = self.conv3(out)
-        out = self.sa(out)
+        x1 = self.conv2(self.conv1(x))
+        y = self.sa(x1)
+        out = y*x1.expand_as(x1)
 
-        if self.downsample is not None:
-            identity = self.downsample(x)
-
-        if self.shortcut:
-            out += identity
-        out = self.act(out)
-        return out
+        return x + out if self.add else out
 
 class RepNSAELAN4(RepNCSPELAN4):
-    # C3 module with CBAMBottleneck()
     def __init__(self, c1, c2, c3, c4, c5=1): 
         super().__init__(c1, c2, c3, c4, c5)
         self.cv2 = nn.Sequential(RepNSA(c3//2, c4, c5), Conv(c4, c4, 3, 1))
@@ -454,7 +434,7 @@ class LSKBottleneck(nn.Module):
         self.conv1 = Conv(c1, c__, 1, 1, g= groups)
         self.conv2 = Conv(c__, c__, 3, stride, 1, g= groups)
         self.conv3 = Conv(c__, c2, 1, 1, g= groups, act=False)
-        self.act = nn.ReLU()
+        self.act = nn.SiLU()
         self.lsk = LSKblock(c2)
 
         self.downsample = None
@@ -482,7 +462,6 @@ class LSKBottleneck(nn.Module):
         return out
 
 class RepNLSKLAN4(RepNCSPELAN4):
-    # C3 module with CBAMBottleneck()
     def __init__(self, c1, c2, c3, c4, c5=1): 
         super().__init__(c1, c2, c3, c4, c5)
         self.cv2 = nn.Sequential(RepNLSK(c3//2, c4, c5), Conv(c4, c4, 3, 1))
