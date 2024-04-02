@@ -416,26 +416,22 @@ class LSKblock(nn.Module):
 
 
 
-class LSKAttention(nn.Module):
-    def __init__(self, c1, c2):
-        super().__init__()
+# class LSKAttention(nn.Module):
+#     def __init__(self, c1, c2, shortcut = True):
+#         super().__init__()
 
-        self.proj_1 = nn.Conv2d(c1, c1, 1)
-        self.activation = nn.GELU()
-        self.spatial_gating_unit = LSKblock(c1)
-        self.proj_2 = nn.Conv2d(c1, c1, 1)
-        self.proj_3 = nn.Conv2d(c1, c2, 1)
+#         self.conv1 = Conv(c1, c1, 1)
+#         self.spatial_gating_unit = LSKblock(c1)
+#         self.conv2 = Conv(c1, c2, 1)
+#         self.add = shortcut and c1 == c2
 
 
-    def forward(self, x):
-        shorcut = x.clone()
-        x = self.proj_1(x)
-        x = self.activation(x)
-        x = self.spatial_gating_unit(x)
-        x = self.proj_2(x)
-        x = x + shorcut
-        x = self.proj_3(x)
-        return x
+#     def forward(self, x):
+#         x1 = self.conv1(x)
+#         x = self.spatial_gating_unit(x)
+#         x = self.proj_2(x)
+#         x = x + shorcut
+#         return x
 
 class LSKBottleneck(nn.Module):
     # expansion = 4
