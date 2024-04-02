@@ -31,13 +31,13 @@ class RepNSA(nn.Module):
     
 class RepNLSK(nn.Module):
     # CSP Bottleneck with 3 convolutions
-    def __init__(self, c1, c2, n=1, shortcut=True, groups=1, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
+    def __init__(self, c1, c2, n=1, shortcut=True, g=1, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
         super().__init__()
         c_ = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, c_, 1, 1)
         self.cv2 = Conv(c1, c_, 1, 1)
         self.cv3 = Conv(2 * c_, c2, 1)  # optional act=FReLU(c2)
-        self.m = nn.Sequential(*(LSKBottleneck(c_, c_, 1, shortcut, groups=groups) for _ in range(n)))
+        self.m = nn.Sequential(*(LSKBottleneck(c_, c_, 1, shortcut, g=g) for _ in range(n)))
 
     def forward(self, x):
         return self.cv3(torch.cat((self.m(self.cv1(x)), self.cv2(x)), 1))
@@ -316,7 +316,7 @@ class SABottleneck(nn.Module):
     def forward(self, x):
         x1 = self.conv2(self.conv1(x))
         y = self.sa(x1)
-        out = y*x1.expand_as(x1)
+        out = y
 
         return x + out if self.add else out
 
@@ -426,40 +426,22 @@ class LSKAttention(nn.Module):
 
 class LSKBottleneck(nn.Module):
     # expansion = 4
-    def __init__(self, c1, c2, stride=1, shortcut=True, groups=1):
+    def __init__(self, c1, c2, s=1, shortcut=True, g=1):
         super(LSKBottleneck, self).__init__()
-        c__ = c2 // 2
+        c_ = c2 // 2
         self.shortcut = shortcut
-
-        self.conv1 = Conv(c1, c__, 1, 1, g= groups)
-        self.conv2 = Conv(c__, c__, 3, stride, 1, g= groups)
-        self.conv3 = Conv(c__, c2, 1, 1, g= groups, act=False)
-        self.act = nn.SiLU()
+        self.add = shortcut and c1 == c2
+        self.conv1 = Conv(c1, c_, 1)
+        self.conv2 = Conv(c_, c2, 3, s, g= g)
         self.lsk = LSKblock(c2)
 
-        self.downsample = None
-        if stride != 1 or c1 != c2:
-            self.downsample = nn.Sequential(
-                Conv(c1, c2, k=1, s=stride, g=groups, act=False),
-                nn.BatchNorm2d(c2)
-            )
-
-        self.stride = stride
-
     def forward(self, x):
-        identity = x
-        out = self.conv1(x)
-        out = self.conv2(out)
-        out = self.conv3(out)
-        out = self.lsk(out)
+        x1 = self.conv2(self.conv1(x))
+        y = self.lsk(x1)
+        out = y
 
-        if self.downsample is not None:
-            identity = self.downsample(x)
+        return x + out if self.add else out
 
-        if self.shortcut:
-            out += identity
-        out = self.act(out)
-        return out
 
 class RepNLSKLAN4(RepNCSPELAN4):
     def __init__(self, c1, c2, c3, c4, c5=1): 
