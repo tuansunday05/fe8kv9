@@ -4,43 +4,53 @@
 from models.common import *
 
 class RepNCBAM(nn.Module):
-    # CSP Bottleneck with 3 convolutions
     def __init__(self, c1, c2, n=1, shortcut=True, g=1, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
         super().__init__()
         c_ = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, c_, 1, 1)
         self.cv2 = Conv(c1, c_, 1, 1)
-        self.cv3 = Conv(2 * c_, c2, 1)  # optional act=FReLU(c2)
+        self.cv3 = Conv(2 * c_, c2, 1)  
         self.m = nn.Sequential(*(CBAMBottleneck(c_, c_, shortcut, g, e=1.0) for _ in range(n)))
 
     def forward(self, x):
         return self.cv3(torch.cat((self.m(self.cv1(x)), self.cv2(x)), 1))
     
 class RepNSA(nn.Module):
-    # CSP Bottleneck with 3 convolutions
     def __init__(self, c1, c2, n=1, shortcut=True, g=16, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
         super().__init__()
         c_ = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, c_, 1, 1)
         self.cv2 = Conv(c1, c_, 1, 1)
-        self.cv3 = Conv(2 * c_, c2, 1)  # optional act=FReLU(c2)
+        self.cv3 = Conv(2 * c_, c2, 1) 
         self.m = nn.Sequential(*(SABottleneck(c_, c_, 1, shortcut, g=g) for _ in range(n)))
 
     def forward(self, x):
         return self.cv3(torch.cat((self.m(self.cv1(x)), self.cv2(x)), 1))
     
 class RepNLSK(nn.Module):
-    # CSP Bottleneck with 3 convolutions
     def __init__(self, c1, c2, n=1, shortcut=True, g=1, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
         super().__init__()
         c_ = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, c_, 1, 1)
         self.cv2 = Conv(c1, c_, 1, 1)
-        self.cv3 = Conv(2 * c_, c2, 1)  # optional act=FReLU(c2)
+        self.cv3 = Conv(2 * c_, c2, 1) 
         self.m = nn.Sequential(*(LSKBottleneck(c_, c_, 1, shortcut, g=g) for _ in range(n)))
 
     def forward(self, x):
         return self.cv3(torch.cat((self.m(self.cv1(x)), self.cv2(x)), 1))
+    
+class RepNECA(nn.Module):
+    def __init__(self, c1, c2, n=1, shortcut=True, g=1, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
+        super().__init__()
+        c_ = int(c2 * e)  # hidden channels
+        self.cv1 = Conv(c1, c_, 1, 1)
+        self.cv2 = Conv(c1, c_, 1, 1)
+        self.cv3 = Conv(2 * c_, c2, 1) 
+        self.m = nn.Sequential(*(ECABottleneck(c_, c_, shortcut, g=g) for _ in range(n)))
+
+    def forward(self, x):
+        return self.cv3(torch.cat((self.m(self.cv1(x)), self.cv2(x)), 1))
+    
 # ----------------------- Attention Mechanism ---------------------------
 
 ## CBAM ATTENTION
@@ -98,7 +108,6 @@ class CBAMBottleneck(nn.Module):
         self.add = shortcut and c1 == c2
         self.channel_attention = ChannelAttention(c2, ratio)
         self.spatial_attention = SpatialAttention(kernel_size)
-        #self.cbam=CBAM(c1,c2,ratio,kernel_size)
 
     def forward(self, x):
         x1 = self.cv2(self.cv1(x))
@@ -358,21 +367,25 @@ class ECABottleneck(nn.Module):
         self.cv1 = Conv(c1, c_, 1, 1)
         self.cv2 = Conv(c_, c2, 3, 1, g=g)
         self.add = shortcut and c1 == c2
-        # self.eca=ECA(c1,c2)
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.conv = nn.Conv1d(1, 1, kernel_size=k_size, padding=(k_size - 1) // 2, bias=False)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
         x1 = self.cv2(self.cv1(x))
-        # out=self.eca(x1)*x1
         y = self.avg_pool(x1)
         y = self.conv(y.squeeze(-1).transpose(-1, -2)).transpose(-1, -2).unsqueeze(-1)
         y = self.sigmoid(y)
         out = x1 * y.expand_as(x1)
 
         return x + out if self.add else out
-    
+
+class RepNECALAN4(RepNCSPELAN4):
+    def __init__(self, c1, c2, c3, c4, c5=1): 
+        super().__init__(c1, c2, c3, c4, c5)
+        self.cv2 = nn.Sequential(RepNECA(c3//2, c4, c5), Conv(c4, c4, 3, 1))
+        self.cv3 = nn.Sequential(RepNECA(c4, c4, c5), Conv(c4, c4, 3, 1))
+
 ## LSK Attention
 class LSKblock(nn.Module):
     def __init__(self, c1):
