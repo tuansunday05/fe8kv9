@@ -277,11 +277,11 @@ class IDualDDetect(nn.Module):
         self.cv2 = nn.ModuleList(
             nn.Sequential(Conv(x, c2, 3), Conv(c2, c2, 3, g=4), nn.Conv2d(c2, 4 * self.reg_max, 1, groups=4)) for x in ch[:self.nl])
         self.cv3 = nn.ModuleList(
-            nn.Sequential(Conv(x, c3, 3), Conv(c3, c3, 3), nn.Conv2d(c3, self.nc, 1)) for x in ch[:self.nl])
+            nn.Sequential(Convb(x, c3, 1), Conv(c3, c3, 3), Conv(c3, c3, 3), nn.Conv2d(c3, self.nc, 1)) for x in ch[:self.nl])
         self.cv4 = nn.ModuleList(
             nn.Sequential(Conv(x, c4, 3), Conv(c4, c4, 3, g=4), nn.Conv2d(c4, 4 * self.reg_max, 1, groups=4)) for x in ch[self.nl:])
         self.cv5 = nn.ModuleList(
-            nn.Sequential(Conv(x, c5, 3), Conv(c5, c5, 3), nn.Conv2d(c5, self.nc, 1)) for x in ch[self.nl:])
+            nn.Sequential(Convb(x, c5, 1), Conv(c5, c5, 3), Conv(c5, c5, 3), nn.Conv2d(c5, self.nc, 1)) for x in ch[self.nl:])
         self.dfl = DFL(self.reg_max)
         self.dfl2 = DFL(self.reg_max)
         # Define ImplicitA and ImplicitM modules
@@ -293,24 +293,29 @@ class IDualDDetect(nn.Module):
     def fuse(self):
         for i in range(self.nl):
             # Fuse ImplicitA with Convolution
-            # c1, c2, _, _ = self.cv2[i][-1].weight.shape
-            # c1_, c2_, _, _ = self.implicita[i].implicit.shape
-            # self.cv2[i][-1].bias += torch.matmul(self.cv2[i][-1].weight.reshape(c1, c2), self.implicita[i].implicit.reshape(c2_, c1_)).squeeze(1)
-
-            # c1, c2, _, _ = self.cv4[i][0].weight.shape
-            # c1_, c2_, _, _ = self.implicita[i].implicit.shape
-            # self.cv4[i][0].bias += torch.matmul(self.cv4[i][0].weight.reshape(c1, c2), self.implicita[i].implicit.reshape(c2_, c1_)).squeeze(1)
-
+            c1, c2, _, _ = self.cv3[i][0].conv.weight.shape
+            c1_, c2_, _, _ = self.implicita[i].implicit.shape
+            self.cv3[i][0].conv.bias.data += torch.matmul(self.cv3[i][0].conv.weight.reshape(c1, c2), self.implicita[i].implicit.reshape(c2_, c1_)).squeeze(1)
+            c1, c2, _, _ = self.cv5[i][0].conv.weight.shape
+            self.cv5[i][0].conv.bias.data += torch.matmul(self.cv5[i][0].conv.weight.reshape(c1, c2), self.implicita[i].implicit.reshape(c2_, c1_)).squeeze(1)
             # # Fuse ImplicitM with Convolution
+            # self.cv3[i][-1].bias.data += torch.matmul(self.cv3[i][-1].weight, self.implicitm[i].implicit.reshape(c2))
+            c1,c2, _,_ = self.implicitm[i].implicit.shape
             self.cv3[i][-1].weight.data = torch.mul(self.cv3[i][-1].weight, self.implicitm[i].implicit.transpose(0,1))
+            self.cv3[i][-1].bias.data = torch.matmul(self.cv3[i][-1].bias, self.implicitm[i].implicit.reshape(c2))
+
+            # c1, c2, _, _ = self.cv5[i][-1].weight.shape
+            # self.cv3[i][-1].bias.data += torch.matmul(self.cv5[i][-1].weight, self.implicitm[i].implicit.reshape(c2))
             self.cv5[i][-1].weight.data = torch.mul(self.cv5[i][-1].weight, self.implicitm[i].implicit.transpose(0,1))
+            self.cv5[i][-1].bias.data = torch.matmul(self.cv5[i][-1].bias, self.implicitm[i].implicit.reshape(c2))
+
 
     def fuseforward(self, x):
         d1 = []
         d2 = []
         for i in range(self.nl):
-            d1.append(torch.cat((self.cv2[i](x[i]), self.cv3[i](x[i])), 1))
-            d2.append(torch.cat((self.cv4[i](x[self.nl+i]), self.cv5[i](x[self.nl+i])), 1))
+            d1.append(torch.cat((self.cv2[i](x[i]), self.implicitm[i](self.cv3[i](self.implicita[i](x[i])))), 1))
+            d2.append(torch.cat((self.cv4[i](x[self.nl+i]), self.implicitm[i](self.cv5[i](self.implicita[i](x[self.nl+i])))), 1))
         return d1, d2
 
     def forward(self, x):
@@ -768,7 +773,7 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
 
         n = n_ = max(round(n * gd), 1) if n > 1 else n  # depth gain
         if m in {
-            Conv, AConv, ConvTranspose, 
+            Conv, Convb, AConv, ConvTranspose, 
             Bottleneck, SPP, SPPF, DWConv, BottleneckCSP, nn.ConvTranspose2d, DWConvTranspose2d, SPPCSPC, ADown,
             RepNCSPELAN4, SPPELAN, CBAMC4, RepNCBAMELAN4, SOCA, RepNSAELAN4, SABottleneck, LSKBottleneck, RepNLSKLEAN4,
             RepNECALAN4}:
