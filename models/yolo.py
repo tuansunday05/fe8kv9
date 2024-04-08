@@ -286,25 +286,22 @@ class IDualDDetect(nn.Module):
         self.dfl2 = DFL(self.reg_max)
         # Define ImplicitA and ImplicitM modules
         # self.implicita = nn.ModuleList(ImplicitA(x) for x in ch)
-        self.implicitm = nn.ModuleList(ImplicitM(1024) for _ in ch)
+        self.implicitm = nn.ModuleList(ImplicitM(4 * self.reg_max) for _ in ch)
 
         # Fuse weights with implicit knowledge
 
     def fuse(self):
         for i in range(self.nl):
             # # Fuse ImplicitM with Convolution
-            c1, c2, _, _ = self.cv2[i][2].weight.shape
-            self.cv2[i][2].weight.data = torch.mul(self.cv2[i][2].weight, self.implicitm[i].implicit.view(c1, c2, 1, 1))
-
-            c1, c2, _, _ = self.cv4[i][2].weight.shape
-            self.cv4[i][2].weight.data = torch.mul(self.cv4[i][2].weight, self.implicitm[i].implicit.view(c1, c2, 1, 1))
+            self.cv2[i][-1].weight.data = torch.mul(self.cv2[i][-1].weight, self.implicitm[i].implicit.transpose(0,1))
+            self.cv4[i][-1].weight.data = torch.mul(self.cv4[i][-1].weight, self.implicitm[i].implicit.transpose(0,1))
 
     def fuseforward(self, x):
         d1 = []
         d2 = []
         for i in range(self.nl):
-            d1.append(torch.cat((self.cv2[i](x[i]), self.cv3[i](x[i])), 1))
-            d2.append(torch.cat((self.cv4[i](x[self.nl+i]), self.cv5[i](x[self.nl+i])), 1))
+            d1.append(torch.cat((self.implicitm[i](self.cv2[i](x[i])), self.cv3[i](x[i])), 1))
+            d2.append(torch.cat((self.implicitm[i](self.cv4[i](x[self.nl+i])), self.cv5[i](x[self.nl+i])), 1))
         return d1, d2
 
     def forward(self, x):
