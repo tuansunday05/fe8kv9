@@ -22,7 +22,7 @@ if platform.system() != 'Windows':
     ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
 from models.experimental import attempt_load, End2End
-from models.yolo import ClassificationModel, Detect, DDetect, DualDetect, DualDDetect, DetectionModel, SegmentationModel
+from models.yolo import ClassificationModel, Detect, DDetect, DualDetect, DualDDetect, IDualDDetect, DetectionModel, SegmentationModel
 from utils.dataloaders import LoadImages
 from utils.general import (LOGGER, Profile, check_dataset, check_img_size, check_requirements, check_version,
                            check_yaml, colorstr, file_size, get_default_args, print_args, url2file, yaml_save)
@@ -556,7 +556,7 @@ def run(
     # Update model
     model.eval()
     for k, m in model.named_modules():
-        if isinstance(m, (Detect, DDetect, DualDetect, DualDDetect)):
+        if isinstance(m, (Detect, DDetect, DualDetect, DualDDetect, IDualDDetect)):
             m.inplace = inplace
             m.dynamic = dynamic
             m.export = True
