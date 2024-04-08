@@ -286,7 +286,7 @@ class IDualDDetect(nn.Module):
         self.dfl2 = DFL(self.reg_max)
         # Define ImplicitA and ImplicitM modules
         # self.implicita = nn.ModuleList(ImplicitA(x) for x in ch)
-        self.implicitm = nn.ModuleList(ImplicitM(self.no * 7 + self.reg_max) for _ in ch)
+        self.implicitm = nn.ModuleList(ImplicitM(1024) for _ in ch)
 
         # Fuse weights with implicit knowledge
 
@@ -317,9 +317,9 @@ class IDualDDetect(nn.Module):
             self.shape = shape
 
         box, cls = torch.cat([di.view(shape[0], self.no, -1) for di in d1], 2).split((self.reg_max * 4, self.nc), 1)
-        dbox = dist2bbox(self.dfl(self.implicitm[0](box)), self.anchors.unsqueeze(0), xywh=True, dim=1) * self.strides
+        dbox = dist2bbox(self.dfl(box), self.anchors.unsqueeze(0), xywh=True, dim=1) * self.strides
         box2, cls2 = torch.cat([di.view(shape[0], self.no, -1) for di in d2], 2).split((self.reg_max * 4, self.nc), 1)
-        dbox2 = dist2bbox(self.dfl2(self.implicitm[1](box2)), self.anchors.unsqueeze(0), xywh=True, dim=1) * self.strides
+        dbox2 = dist2bbox(self.dfl2(box2), self.anchors.unsqueeze(0), xywh=True, dim=1) * self.strides
         y = [torch.cat((dbox, cls.sigmoid()), 1), torch.cat((dbox2, cls2.sigmoid()), 1)]
         return y if self.export else (y, [d1, d2])
     
