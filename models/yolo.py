@@ -314,8 +314,8 @@ class IDualDDetect(nn.Module):
         d1 = []
         d2 = []
         for i in range(self.nl):
-            d1.append(torch.cat((self.cv2[i](x[i]), self.implicitm[i](self.cv3[i](self.implicita[i](x[i])))), 1))
-            d2.append(torch.cat((self.cv4[i](x[self.nl+i]), self.implicitm[i](self.cv5[i](self.implicita[i](x[self.nl+i])))), 1))
+            d1.append(torch.cat((self.cv2[i](x[i]), self.cv3[i](self.implicita[i](x[i]))), 1))
+            d2.append(torch.cat((self.cv4[i](x[self.nl+i]),self.cv5[i](self.implicita[i](x[self.nl+i]))), 1))
         return d1, d2
 
     def forward(self, x):
