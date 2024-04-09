@@ -301,12 +301,12 @@ class IDualDDetect(nn.Module):
             # # Fuse ImplicitM with Convolution
             # self.cv3[i][-1].bias.data += torch.matmul(self.cv3[i][-1].weight, self.implicitm[i].implicit.reshape(c2))
             c1,c2, _,_ = self.implicitm[i].implicit.shape
-            self.cv3[i][-1].weight.data *= self.implicitm[i].implicit.unsqueeze(2).unsqueeze(3)
+            self.cv3[i][-1].weight.data *= self.implicitm[i].implicit.transpose(0,1)
             self.cv3[i][-1].bias.data = torch.matmul(self.cv3[i][-1].bias, self.implicitm[i].implicit.reshape(c2))
 
             # c1, c2, _, _ = self.cv5[i][-1].weight.shape
             # self.cv3[i][-1].bias.data += torch.matmul(self.cv5[i][-1].weight, self.implicitm[i].implicit.reshape(c2))
-            self.cv5[i][-1].weight.data *= self.implicitm[i].implicit.unsqueeze(2).unsqueeze(3)
+            self.cv5[i][-1].weight.data *= self.implicitm[i].implicit.transpose(0,1)
             self.cv5[i][-1].bias.data = torch.matmul(self.cv5[i][-1].bias, self.implicitm[i].implicit.reshape(c2))
 
 
@@ -318,8 +318,8 @@ class IDualDDetect(nn.Module):
             d1.append(self.cv2[i](x[i]))
             d2.append(self.cv4[i](x[self.nl+i]))
             # Pass through cv3 and cv5 with implicit knowledge
-            d1.append(self.cv3[i](d1[-1] * self.implicitm[i](self.implicita[i](x[i]))))
-            d2.append(self.cv5[i](d2[-1] * self.implicitm[i](self.implicita[i](x[self.nl+i]))))
+            d1.append(self.implicitm[i](self.cv3[i](self.implicita[i](x[i]))))
+            d2.append(self.implicitm[i](self.cv5[i](self.implicita[i](x[self.nl+i]))))
 
         return d1, d2
 
