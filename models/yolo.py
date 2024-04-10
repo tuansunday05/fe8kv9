@@ -308,11 +308,11 @@ class IDualDDetect(nn.Module):
     def forward(self, x):
         shape = x[0].shape  # BCHW
         d1 = []
-        d2 = []        
-        if self.training:
-            for i in range(self.nl):
+        d2 = []    
+        for i in range(self.nl):
                 d1.append(torch.cat((self.cv2[i](x[i]), self.cv3[i](x[i])), 1))
-                d2.append(torch.cat((self.cv4[i](x[self.nl+i]),self.cv5[i](x[self.nl+i])), 1))
+                d2.append(torch.cat((self.cv4[i](x[self.nl+i]),self.cv5[i](x[self.nl+i])), 1))    
+        if self.training:
             return [d1, d2]
         elif self.dynamic or self.shape != shape:
             self.anchors, self.strides = (d1.transpose(0, 1) for d1 in make_anchors(d1, self.stride, 0.5))
@@ -819,7 +819,7 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--cfg', type=str, default='./detect/yolov9-e-dcn.yaml', help='model.yaml')
+    parser.add_argument('--cfg', type=str, default='./detect/yolov9-e-implicit.yaml', help='model.yaml')
     parser.add_argument('--batch-size', type=int, default=1, help='total batch size for all GPUs')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--profile', action='store_true', help='profile model speed')
