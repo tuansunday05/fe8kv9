@@ -305,18 +305,14 @@ class IDualDDetect(nn.Module):
             self.cv5[i][-1].bias.data = torch.matmul(self.cv5[i][-1].bias, self.implicitm[i].implicit.reshape(c2))
 
 
-    def fuseforward(self, x):
-        d1 = []
-        d2 = []
-        for i in range(self.nl):
-            d1.append(torch.cat((self.cv2[i](x[i]), self.cv3[i](x[i])), 1))
-            d2.append(torch.cat((self.cv4[i](x[self.nl+i]),self.cv5[i](x[self.nl+i])), 1))
-        return d1, d2
-
     def forward(self, x):
         shape = x[0].shape  # BCHW
-        d1, d2 = self.fuseforward(x)
+        d1 = []
+        d2 = []        
         if self.training:
+            for i in range(self.nl):
+                d1.append(torch.cat((self.cv2[i](x[i]), self.cv3[i](x[i])), 1))
+                d2.append(torch.cat((self.cv4[i](x[self.nl+i]),self.cv5[i](x[self.nl+i])), 1))
             return [d1, d2]
         elif self.dynamic or self.shape != shape:
             self.anchors, self.strides = (d1.transpose(0, 1) for d1 in make_anchors(d1, self.stride, 0.5))
@@ -589,13 +585,13 @@ class BaseModel(nn.Module):
             if isinstance(m, (RepConvN)) and hasattr(m, 'fuse_convs'):
                 m.fuse_convs()
                 m.forward = m.forward_fuse  # update forward
-            if isinstance(m, (Conv, DWConv)) and hasattr(m, 'bn'):
+            if isinstance(m, (Conv, Convb, DWConv)) and hasattr(m, 'bn'):
                 m.conv = fuse_conv_and_bn(m.conv, m.bn)  # update conv
                 delattr(m, 'bn')  # remove batchnorm
                 m.forward = m.forward_fuse  # update forward
             elif isinstance(m, (IDualDDetect)):
                 m.fuse()
-                m.forward = m.fuseforward
+
         self.info()
         return self
 
