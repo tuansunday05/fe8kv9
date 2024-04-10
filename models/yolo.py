@@ -288,9 +288,8 @@ class IDualDDetect(nn.Module):
         self.implicita = nn.ModuleList(ImplicitA(x) for x in ch)
         self.implicitm = nn.ModuleList(ImplicitM(self.nc) for _ in ch)
 
-        # Fuse weights with implicit knowledge
-
     def fuse(self):
+        # Fuse weights with implicit knowledge
         for i in range(self.nl):
             # Fuse ImplicitA with Convolution
             c1, c2, _, _ = self.cv3[i][0].conv.weight.shape
@@ -298,14 +297,10 @@ class IDualDDetect(nn.Module):
             self.cv3[i][0].conv.bias.data += torch.matmul(self.cv3[i][0].conv.weight.reshape(c1, c2), self.implicita[i].implicit.reshape(c2_, c1_)).squeeze(1)
             c1, c2, _, _ = self.cv5[i][0].conv.weight.shape
             self.cv5[i][0].conv.bias.data += torch.matmul(self.cv5[i][0].conv.weight.reshape(c1, c2), self.implicita[i].implicit.reshape(c2_, c1_)).squeeze(1)
-            # # Fuse ImplicitM with Convolution
-            # self.cv3[i][-1].bias.data += torch.matmul(self.cv3[i][-1].weight, self.implicitm[i].implicit.reshape(c2))
+            # Fuse ImplicitM with Convolution
             c1,c2, _,_ = self.implicitm[i].implicit.shape
             self.cv3[i][-1].weight.data = torch.mul(self.cv3[i][-1].weight, self.implicitm[i].implicit.transpose(0,1))
             self.cv3[i][-1].bias.data = torch.matmul(self.cv3[i][-1].bias, self.implicitm[i].implicit.reshape(c2))
-
-            # c1, c2, _, _ = self.cv5[i][-1].weight.shape
-            # self.cv3[i][-1].bias.data += torch.matmul(self.cv5[i][-1].weight, self.implicitm[i].implicit.reshape(c2))
             self.cv5[i][-1].weight.data = torch.mul(self.cv5[i][-1].weight, self.implicitm[i].implicit.transpose(0,1))
             self.cv5[i][-1].bias.data = torch.matmul(self.cv5[i][-1].bias, self.implicitm[i].implicit.reshape(c2))
 
@@ -776,7 +771,7 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
             Conv, Convb, AConv, ConvTranspose, 
             Bottleneck, SPP, SPPF, DWConv, BottleneckCSP, nn.ConvTranspose2d, DWConvTranspose2d, SPPCSPC, ADown,
             RepNCSPELAN4, SPPELAN, CBAMC4, RepNCBAMELAN4, SOCA, RepNSAELAN4, SABottleneck, LSKBottleneck, RepNLSKLEAN4,
-            RepNECALAN4}:
+            RepNECALAN4, C2f_DCNv2, RepDCNv2LEAN4}:
             c1, c2 = ch[f], args[0]
             if c2 != no:  # if not output
                 c2 = make_divisible(c2 * gw, 8)
@@ -828,7 +823,7 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--cfg', type=str, default='./detect/yolov9-e-implicit.yaml', help='model.yaml')
+    parser.add_argument('--cfg', type=str, default='./detect/yolov9-e-dcn.yaml', help='model.yaml')
     parser.add_argument('--batch-size', type=int, default=1, help='total batch size for all GPUs')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--profile', action='store_true', help='profile model speed')
