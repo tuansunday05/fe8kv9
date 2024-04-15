@@ -452,7 +452,7 @@ class LSKBottleneck(nn.Module):
         return x + out if self.add else out
 
 
-class RepNLSKLEAN4(RepNCSPELAN4):
+class RepNLSKELAN4(RepNCSPELAN4):
     def __init__(self, c1, c2, c3, c4, c5=1): 
         super().__init__(c1, c2, c3, c4, c5)
         self.cv2 = nn.Sequential(RepNLSK(c3//2, c4, c5), Conv(c4, c4, 3, 1))
