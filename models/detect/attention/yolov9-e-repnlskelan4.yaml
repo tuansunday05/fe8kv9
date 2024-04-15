@@ -79,7 +79,7 @@ backbone:
    [[14, -1], 1, CBFuse, [[4]]], # 27
 
    # csp-elan block
-   [-1, 1, RepNLSKLEAN4, [1024, 512, 256, 2]],  # 28
+   [-1, 1, RepNLSKELAN4, [1024, 512, 256, 2]],  # 28
   ]
 
 # YOLOv9 head
