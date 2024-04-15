@@ -231,8 +231,8 @@ class ComputeLoss:
                                                    target_scores,
                                                    target_scores_sum,
                                                    fg_mask)
-            loss[0] *= 0.25
-            loss[2] *= 0.25
+            loss[0] *= 0.25 # loss iou
+            loss[2] *= 0.25 # loss dfl
         if fg_mask2.sum():
             loss0_, loss2_, iou2 = self.bbox_loss2(pred_distri2,
                                                    pred_bboxes2,
