@@ -312,8 +312,9 @@ class ComputeLoss:
         loss[1] *= 0.5  # cls gain
         loss[2] *= 1.5  # dfl gain
         warp_loss2 *= 1.0  # warp gain
+        print("Warp loss value: ", warp_loss2)
         print("Warp loss shape: ", warp_loss2.shape)
-        print("Cls loss shape: ", loss[1].shape)
+        print("Cls loss before sum shape: ", self.BCEcls(pred_scores, target_scores.to(dtype)).shape)
 
         return (loss.sum() + warp_loss2) * batch_size, loss.detach()  # loss(box, cls, dfl)
 
