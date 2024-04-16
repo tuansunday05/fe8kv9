@@ -133,7 +133,7 @@ class WarpLoss(nn.Module):
         # Compute angle between predicted and target bounding boxes
         delta_x = target_bboxes[..., 0] - img_center[..., 0]
         delta_y = target_bboxes[..., 1] - img_center[..., 1]
-        angle = torch.atan2(delta_y, delta_x)  # Angle between predicted bbox and anchor point
+        angle = torch.arctan(delta_y/delta_x)  # Angle between predicted bbox and anchor point
 
         # target_delta_x = target_bboxes[..., 0] - anchor_points[..., 0]
         # target_delta_y = target_bboxes[..., 1] - anchor_points[..., 1]
@@ -141,7 +141,7 @@ class WarpLoss(nn.Module):
 
         # angle_diff = torch.abs(angle - target_angle)  # Absolute angle difference
         angle_loss = 1 - torch.cos(angle)  # Angle-based loss
-
+        print("Angle loss shape: ",angle_loss.shape)
         return angle_loss
 
     def compute_distance_loss(self, pred_bboxes, anchor_points):
@@ -155,6 +155,7 @@ class WarpLoss(nn.Module):
 
         # Apply weighting based on distance
         dist_loss = normalized_distance ** 2  # Squared distance for emphasis
+        print("Distance loss shape: ",dist_loss.shape)
 
         return dist_loss
 
