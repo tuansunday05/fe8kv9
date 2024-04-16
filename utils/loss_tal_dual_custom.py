@@ -125,7 +125,7 @@ class WarpLoss(nn.Module):
         # bce_loss = F.binary_cross_entropy_with_logits(pred_scores.squeeze(-1), target_scores.to(dtype), reduction='none')/ target_scores_sum
         # loss *= bce_loss
 
-        return loss.sum()
+        return loss.mean()
 
 
     def compute_angle_loss(self, pred_bboxes, anchor_points, target_bboxes):
