@@ -129,6 +129,8 @@ class WarpLoss(nn.Module):
 
     def compute_angle_loss(self, pred_bboxes, anchor_points, target_bboxes):
         img_center = torch.tensor([pred_bboxes.size(-2) / 2, pred_bboxes.size(-1) / 2], device=pred_bboxes.device)
+        print("img_center shape: ",img_center.shape)
+        print("target_bboxes shape: ",target_bboxes.shape)
 
         # Compute angle between predicted and target bounding boxes
         delta_x = target_bboxes[..., 0] - img_center[..., 0]
@@ -141,7 +143,6 @@ class WarpLoss(nn.Module):
 
         # angle_diff = torch.abs(angle - target_angle)  # Absolute angle difference
         angle_loss = 1 - torch.cos(angle)  # Angle-based loss
-        print("Angle loss shape: ",angle_loss.shape)
         return angle_loss
 
     def compute_distance_loss(self, pred_bboxes, anchor_points):
