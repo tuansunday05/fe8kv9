@@ -136,7 +136,7 @@ class WarpLoss(nn.Module):
         delta_y = pred_bboxes[..., 1] - img_center[..., 1]
         angle = torch.arctan(delta_y/delta_x)
         angle_loss = 1 - torch.cos(angle)  # Angle-based loss
-        print("Angle loss shape: ",angle_loss.shape)
+        # print("Angle loss shape: ",angle_loss.shape)
 
         return angle_loss #.mean()
 
@@ -151,7 +151,7 @@ class WarpLoss(nn.Module):
 
         # Apply weighting based on distance
         dist_loss = normalized_distance ** 2  # Squared distance for emphasis
-        print("Distance loss shape: ",dist_loss.shape)
+        # print("Distance loss shape: ",dist_loss.shape)
 
         return dist_loss #.mean()
 
@@ -302,13 +302,12 @@ class ComputeLoss:
             loss[2] += loss2_
         
         # warp loss
-        bce_loss_box2 = self.BCEcls(pred_scores, target_scores.to(dtype)).mean(dim = -1)
+        bce_loss_bbox2 = self.BCEcls(pred_scores, target_scores.to(dtype)).mean(dim = -1)
         if fg_mask2.sum():
             warp_loss2 = self.warp_loss(pred_bboxes2,
                                         anchor_points,
                                         target_bboxes2,
-                                        target_scores2,
-                                        bce_loss_box2)
+                                        bce_loss_bbox2)
 
         loss[0] *= 7.5  # box gain
         loss[1] *= 0.5  # cls gain
