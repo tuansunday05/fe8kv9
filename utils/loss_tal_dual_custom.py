@@ -120,27 +120,29 @@ class WarpLoss(nn.Module):
         loss = angle_loss + dist_loss
 
         # Multiply with binary cross-entropy loss
-        dtype = pred_scores.dtype
-        bce_loss = F.binary_cross_entropy_with_logits(pred_scores.squeeze(-1), target_scores.to(dtype), reduction='none')/ target_scores_sum
-        loss *= bce_loss
+        # dtype = pred_scores.dtype
+        # bce_loss = F.binary_cross_entropy_with_logits(pred_scores.squeeze(-1), target_scores.to(dtype), reduction='none')/ target_scores_sum
+        # loss *= bce_loss
 
-        return loss.mean()
+        return loss
 
 
     def compute_angle_loss(self, pred_bboxes, anchor_points, target_bboxes):
         img_center = torch.tensor([pred_bboxes.size(-2) / 2, pred_bboxes.size(-1) / 2], device=pred_bboxes.device)
         # Compute angle between target box and horizontal line
-        bbox_center = pred_bboxes[..., :2].mean(-2) 
-        delta_x = bbox_center[..., 0] - img_center[..., 0]
-        delta_y = bbox_center[..., 1] - img_center[..., 1]
+        # bbox_center = pred_bboxes[..., :2].mean(-2) 
+        delta_x = pred_bboxes[..., 0] - img_center[..., 0]
+        delta_y = pred_bboxes[..., 1] - img_center[..., 1]
         angle = torch.arctan(delta_y/delta_x)
         angle_loss = 1 - torch.cos(angle)  # Angle-based loss
-        return angle_loss
+        print("Angle loss shape: ",angle_loss.shape)
+
+        return angle_loss.mean()
 
     def compute_distance_loss(self, pred_bboxes, anchor_points):
         # Compute distance between predicted bounding boxes and center of the image
         img_center = torch.tensor([pred_bboxes.size(-2) / 2, pred_bboxes.size(-1) / 2], device=pred_bboxes.device)
-        bbox_center = pred_bboxes[..., :2].mean(-2)  # Compute bbox centers
+        bbox_center = pred_bboxes[..., :2] #.mean(-2)  # Compute bbox centers
         distance = torch.norm(bbox_center - img_center, dim=-1)  # Euclidean distance
 
         # Normalize distance to range [0, 1]
@@ -150,7 +152,7 @@ class WarpLoss(nn.Module):
         dist_loss = normalized_distance ** 2  # Squared distance for emphasis
         print("Distance loss shape: ",dist_loss.shape)
 
-        return dist_loss
+        return dist_loss.mean()
 
 
 class ComputeLoss:
@@ -310,6 +312,8 @@ class ComputeLoss:
         loss[1] *= 0.5  # cls gain
         loss[2] *= 1.5  # dfl gain
         warp_loss2 *= 1.0  # warp gain
+        print("Warp loss shape: ", warp_loss2.shape)
+        print("Cls loss shape: ", loss[1].shape)
 
         return (loss.sum() + warp_loss2) * batch_size, loss.detach()  # loss(box, cls, dfl)
 
