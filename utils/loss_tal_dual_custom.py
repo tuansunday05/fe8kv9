@@ -312,7 +312,7 @@ class ComputeLoss:
         loss[0] *= 7.5  # box gain
         loss[1] *= 0.5  # cls gain
         loss[2] *= 1.5  # dfl gain
-        warp_loss2 *= 1.0  # warp gain
+        warp_loss2 *= 13.0  # warp gain
         print("Cls loss: ", loss[1].item())
         print("Warp loss: ", warp_loss2.item())
 
