@@ -225,7 +225,7 @@ class ComputeLoss:
         return dist2bbox(pred_dist, anchor_points, xywh=False)
 
     def __call__(self, p, targets, img=None, epoch=0):
-        loss = torch.zeros(3, device=self.device)  # box, cls, dfl
+        loss = torch.zeros(4, device=self.device)  # box, cls, dfl
         feats = p[1][0] if isinstance(p, tuple) else p[0]
         feats2 = p[1][1] if isinstance(p, tuple) else p[1]
         
@@ -308,11 +308,12 @@ class ComputeLoss:
                                         anchor_points,
                                         target_bboxes2,
                                         bce_loss_bbox2)
+            loss[3] += warp_loss2
 
         loss[0] *= 7.5  # box gain
         loss[1] *= 0.5  # cls gain
         loss[2] *= 1.5  # dfl gain
-        warp_loss2 *= 13.0  # warp gain
+        loss[3] *= 55.0  # warp gain
         print("Warp loss: ", warp_loss2.item())
 
         return (loss.sum() + warp_loss2) * batch_size, loss.detach()  # loss(box, cls, dfl)
