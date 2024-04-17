@@ -302,7 +302,7 @@ class ComputeLoss:
             loss[2] += loss2_
         
         # warp loss
-        bce_loss_bbox2 = self.BCEcls(pred_scores, target_scores.to(dtype)).mean(dim = -1)
+        bce_loss_bbox2 = self.BCEcls(pred_scores, target_scores.to(dtype)).sum(dim = -1)
         if fg_mask2.sum():
             warp_loss2 = self.warp_loss(pred_bboxes2,
                                         anchor_points,
@@ -312,9 +312,9 @@ class ComputeLoss:
         loss[0] *= 7.5  # box gain
         loss[1] *= 0.5  # cls gain
         loss[2] *= 1.5  # dfl gain
-        warp_loss2 *= 5.5  # warp gain
+        warp_loss2 *= 1.0  # warp gain
         
-        # print("Warp loss: ", warp_loss2.item())
+        print("Warp loss: ", warp_loss2.item())
 
         return (loss.sum() + warp_loss2) * batch_size, loss.detach()  # loss(box, cls, dfl)
 
