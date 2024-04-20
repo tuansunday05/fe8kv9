@@ -35,7 +35,7 @@ from utils.general import (LOGGER, TQDM_BAR_FORMAT, check_amp, check_dataset, ch
                            get_latest_run, increment_path, init_seeds, intersect_dicts, labels_to_class_weights,
                            labels_to_image_weights, methods, one_cycle, print_args, print_mutation, strip_optimizer,
                            yaml_save, one_flat_cycle)
-from utils.loggers import Loggers
+from utils.loggers import CustomedLoggers
 from utils.loggers.comet.comet_utils import check_comet_resume
 # from utils.loss_tal_dual import ComputeLoss
 from utils.loss_tal_dual_custom import ComputeLoss
@@ -80,7 +80,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
     # Loggers
     data_dict = None
     if RANK in {-1, 0}:
-        loggers = Loggers(save_dir, weights, opt, hyp, LOGGER)  # loggers instance
+        loggers = CustomedLoggers(save_dir, weights, opt, hyp, LOGGER)  # loggers instance
 
         # Register actions
         for k in methods(loggers):
