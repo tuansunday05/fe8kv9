@@ -40,7 +40,7 @@ backbone:
    [-1, 1, ADown, [1024]],  # 8-P5/32
 
    # csp-elan block
-   [-1, 1, RepNCSPELAN4, [1024, 512, 256, 2]],  # 9
+   [-1, 1, RepDCNv2LEAN4, [1024, 512, 256, 2]],  # 9
    
    # routing
    [1, 1, CBLinear, [[64]]], # 10
@@ -65,21 +65,21 @@ backbone:
    [[12, 13, 14, -1], 1, CBFuse, [[2, 2, 2]]], # 21  
 
    # csp-elan block
-   [-1, 1, RepNLSKELAN4, [512, 256, 128, 2]],  # 22
+   [-1, 1, RepNCSPELAN4, [512, 256, 128, 2]],  # 22
 
    # avg-conv down fuse
    [-1, 1, ADown, [512]],  # 23-P4/16
    [[13, 14, -1], 1, CBFuse, [[3, 3]]], # 24 
 
    # csp-elan block
-   [-1, 1, RepNLSKELAN4, [1024, 512, 256, 2]],  # 25
+   [-1, 1, RepNCSPELAN4, [1024, 512, 256, 2]],  # 25
 
    # avg-conv down fuse
    [-1, 1, ADown, [1024]],  # 26-P5/32
    [[14, -1], 1, CBFuse, [[4]]], # 27
 
    # csp-elan block
-   [-1, 1, RepNLSKELAN4, [1024, 512, 256, 2]],  # 28
+   [-1, 1, RepNCSPELAN4, [1024, 512, 256, 2]],  # 28
   ]
 
 # YOLOv9 head

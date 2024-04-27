@@ -40,7 +40,7 @@ backbone:
    [-1, 1, ADown, [1024]],  # 8-P5/32
 
    # csp-elan block
-   [-1, 1, RepNCSPELAN4, [1024, 512, 256, 2]],  # 9
+   [-1, 1, RepDCNv2LEAN4, [1024, 512, 256, 2]],  # 9
    
    # routing
    [1, 1, CBLinear, [[64]]], # 10

@@ -28,19 +28,19 @@ backbone:
    [-1, 1, ADown, [256]],  # 4-P3/8
 
    # csp-elan block
-   [-1, 1, RepNCSPELAN4, [512, 256, 128, 2]],  # 5
+   [-1, 1, RepDCNv2LEAN4, [512, 256, 128, 2]],  # 5
 
    # avg-conv down
    [-1, 1, ADown, [512]],  # 6-P4/16
 
    # csp-elan block
-   [-1, 1, RepNCSPELAN4, [1024, 512, 256, 2]],  # 7
+   [-1, 1, RepDCNv2LEAN4, [1024, 512, 256, 2]],  # 7
 
    # avg-conv down
    [-1, 1, ADown, [1024]],  # 8-P5/32
 
    # csp-elan block
-   [-1, 1, RepNCSPELAN4, [1024, 512, 256, 2]],  # 9
+   [-1, 1, RepDCNv2LEAN4, [1024, 512, 256, 2]],  # 9
    
    # routing
    [1, 1, CBLinear, [[64]]], # 10

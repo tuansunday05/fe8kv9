@@ -31,7 +31,7 @@ class VarifocalLoss(nn.Module):
 
 class FocalLoss(nn.Module):
     # Wraps focal loss around existing loss_fcn(), i.e. criteria = FocalLoss(nn.BCEWithLogitsLoss(), gamma=1.5)
-    def __init__(self, loss_fcn, gamma=1.5, alpha=0.5):
+    def __init__(self, loss_fcn, gamma=1.5, alpha=0.25):
         super().__init__()
         self.loss_fcn = loss_fcn  # must be nn.BCEWithLogitsLoss()
         self.gamma = gamma
@@ -103,6 +103,59 @@ class BboxLoss(nn.Module):
         return (loss_left + loss_right).mean(-1, keepdim=True)
 
 
+class WarpLoss(nn.Module):
+    def __init__(self, reg_max, use_dfl=False):
+        super().__init__()
+        self.reg_max = reg_max
+        self.use_dfl = use_dfl
+
+    def forward(self, pred_bboxes, anchor_points, target_bboxes, bce_loss):
+        # Compute angle-based weighting
+        angle_loss = self.compute_angle_loss(pred_bboxes, anchor_points, target_bboxes)
+        angle_loss *= 0.3   # angle gain
+        # Compute distance-based weighting
+        dist_loss = self.compute_distance_loss(pred_bboxes, anchor_points)
+        dist_loss *= 0.7    # distance gain
+        # Combine angle and distance losses
+        loss = angle_loss + dist_loss
+        loss *= bce_loss
+
+        # Multiply with binary cross-entropy loss
+        # dtype = pred_scores.dtype
+        # bce_loss = F.binary_cross_entropy_with_logits(pred_scores.squeeze(-1), target_scores.to(dtype), reduction='none')/ target_scores_sum
+        # loss *= bce_loss
+
+        return loss.mean()
+
+
+    def compute_angle_loss(self, pred_bboxes, anchor_points, target_bboxes):
+        img_center = torch.tensor([pred_bboxes.size(-2) / 2, pred_bboxes.size(-1) / 2], device=pred_bboxes.device)
+        # Compute angle between target box and horizontal line
+        # bbox_center = pred_bboxes[..., :2].mean(-2) 
+        delta_x = pred_bboxes[..., 0] - img_center[..., 0]
+        delta_y = pred_bboxes[..., 1] - img_center[..., 1]
+        angle = torch.arctan(delta_y/delta_x)
+        angle_loss = 1 - torch.cos(angle)  # Angle-based loss
+        # print("Angle loss shape: ",angle_loss.shape)
+
+        return angle_loss #.mean()
+
+    def compute_distance_loss(self, pred_bboxes, anchor_points):
+        # Compute distance between predicted bounding boxes and center of the image
+        img_center = torch.tensor([pred_bboxes.size(-2) / 2, pred_bboxes.size(-1) / 2], device=pred_bboxes.device)
+        bbox_center = pred_bboxes[..., :2] #.mean(-2)  # Compute bbox centers
+        distance = torch.norm(bbox_center - img_center, dim=-1)  # Euclidean distance
+
+        # Normalize distance to range [0, 1]
+        normalized_distance = distance / torch.norm(img_center)
+
+        # Apply weighting based on distance
+        dist_loss = normalized_distance ** 2  # Squared distance for emphasis
+        # print("Distance loss shape: ",dist_loss.shape)
+
+        return dist_loss #.mean()
+
+
 class ComputeLoss:
     # Compute losses
     def __init__(self, model, use_dfl=True):
@@ -143,6 +196,10 @@ class ComputeLoss:
         self.bbox_loss2 = BboxLoss(m.reg_max - 1, use_dfl=use_dfl).to(device)
         self.proj = torch.arange(m.reg_max).float().to(device)  # / 120.0
         self.use_dfl = use_dfl
+        
+        # Customed loss
+        self.warp_loss = WarpLoss(m.reg_max - 1, use_dfl=use_dfl).to(device)  # Initialize WarpLoss
+
 
     def preprocess(self, targets, batch_size, scale_tensor):
         if targets.shape[0] == 0:
@@ -168,7 +225,7 @@ class ComputeLoss:
         return dist2bbox(pred_dist, anchor_points, xywh=False)
 
     def __call__(self, p, targets, img=None, epoch=0):
-        loss = torch.zeros(3, device=self.device)  # box, cls, dfl
+        loss = torch.zeros(4, device=self.device)  # box, cls, dfl
         feats = p[1][0] if isinstance(p, tuple) else p[0]
         feats2 = p[1][1] if isinstance(p, tuple) else p[1]
         
@@ -243,12 +300,23 @@ class ComputeLoss:
                                                    fg_mask2)
             loss[0] += loss0_
             loss[2] += loss2_
+        
+        # warp loss
+        bce_loss_bbox2 = self.BCEcls(pred_scores, target_scores.to(dtype)).sum(dim = -1)
+        if fg_mask2.sum():
+            warp_loss2 = self.warp_loss(pred_bboxes2,
+                                        anchor_points,
+                                        target_bboxes2,
+                                        bce_loss_bbox2)
+            loss[3] += warp_loss2
 
         loss[0] *= 7.5  # box gain
         loss[1] *= 0.5  # cls gain
         loss[2] *= 1.5  # dfl gain
+        loss[3] *= 55.0  # warp gain
+        # print("Warp loss: ", warp_loss2.item())
 
-        return loss.sum() * batch_size, loss.detach()  # loss(box, cls, dfl)
+        return (loss.sum() + warp_loss2) * batch_size, loss.detach()  # loss(box, cls, dfl)
 
 
 class ComputeLossLH:
