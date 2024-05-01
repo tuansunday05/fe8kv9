@@ -106,21 +106,21 @@ head:
    [[29, 30, 31, -1], 1, CBFuse, [[0, 0, 0]]], # 36
 
    # elan-2 block
-   [-1, 1, RepNCSPELAN4, [512, 256, 128, 1]],  # 37
+   [-1, 1, RepNLSKELAN4, [512, 256, 128, 1]],  # 37
 
    # avg-conv down fuse
    [-1, 1, ADown, [512]],  # 38-P4/16
    [[30, 31, -1], 1, CBFuse, [[1, 1]]], # 39
 
    # elan-2 block
-   [-1, 1, RepNCSPELAN4, [512, 512, 256, 1]],  # 40
+   [-1, 1, RepNLSKELAN4, [512, 512, 256, 1]],  # 40
 
    # avg-conv down fuse
    [-1, 1, ADown, [512]],  # 41-P5/32
    [[31, -1], 1, CBFuse, [[2]]], # 42
 
    # elan-2 block
-   [-1, 1, RepNCSPELAN4, [512, 512, 256, 1]],  # 43
+   [-1, 1, RepNLSKELAN4, [512, 512, 256, 1]],  # 43
    
    
    
