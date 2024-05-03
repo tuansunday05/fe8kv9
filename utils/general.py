@@ -951,7 +951,7 @@ def soft_nms(bboxes, scores, iou_thresh=0.5,sigma=0.5,score_threshold=0.25):
             i = order[0]
             keep.append(i)
         
-        iou = box_iou_for_nms(bboxes[i], bboxes[order[1:]], EIou=True).squeeze()
+        iou = box_iou_for_nms(bboxes[i], bboxes[order[1:]], SIoU=True).squeeze()
         
         idx = (iou > iou_thresh).nonzero().squeeze()
         if idx.numel() > 0: 
