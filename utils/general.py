@@ -919,6 +919,8 @@ def box_iou_for_nms(box1, box2, GIoU=False, DIoU=False, CIoU=False, SIoU=False, 
         c_area = cw * ch + eps  # convex area
         return iou - (c_area - union) / c_area  # GIoU https://arxiv.org/pdf/1902.09630.pdf
     elif SIoU:
+        cw = b1_x2.maximum(b2_x2) - b1_x1.minimum(b2_x1)  # convex (smallest enclosing box) width
+        ch = b1_y2.maximum(b2_y2) - b1_y1.minimum(b2_y1)  # convex height
         # SIoU Loss https://arxiv.org/pdf/2205.12740.pdf
         s_cw = (b2_x1 + b2_x2 - b1_x1 - b1_x2) * 0.5 + eps
         s_ch = (b2_y1 + b2_y2 - b1_y1 - b1_y2) * 0.5 + eps
