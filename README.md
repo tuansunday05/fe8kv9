@@ -35,7 +35,6 @@ Results on [FishEye8K](https://scidm.nchc.org.tw/en/dataset/fisheye8k) dataset.
 | [**YOLOR-W6**]() | 1280 | **64.6%** | **44.2%** | **58.9%** | **79.8M** | **454.0G** |
 | [**YOLOR-P6**]() | 1280 | **66.32%** | **44.0%** | **61.1%** | **37.2M** | **326.2G** |
 | [**YOLOv7-E6E**]() | 1280 | **50.8%** | **32.6%** | **62.9%** | **151.7M** | **843.2G** |
-|  |  |  |  |  |  |  |
 
 ## Our proposed model architecture
 Our model is a modified version most inspired from [YOLOv9-e](https://github.com/WongKinYiu/yolov9) model. The target of this modify is tailed for fisheye camera object detection task and also object detection for image from 360 degree camera.
@@ -164,8 +163,8 @@ python detect.py --source './figure/example.jpg' --img 640 --device 0 --weights 
 python detect_dual.py --source './figure/example.jpg' --img 640 --device 0 --weights './yolov9-e-modify-trained.pt' --name yolov9_e_modify_640_detect
 ```
 
-## Demo with tracking algorithm
-We also integrated tracking algorithm and made a comparison with Yolov9-e model for more intuitive visuallization. Original video demo taking from [R0 Fish Len Dataset Center Point](https://scidm.nchc.org.tw/dataset/traffic_fisheyelen).
+## Demo with StrongSORT
+We also integrated tracking algorithm (StrongSORT) and made a comparison with Yolov9-e model for more intuitive visuallization. Original video demo taking from [R0 Fish Len Dataset Center Point](https://scidm.nchc.org.tw/dataset/traffic_fisheyelen).
 
 <video src="https://github.com/tuansunday05/fe8kv9/assets/135792691/20b741ba-bd8c-4ec2-b6f8-7f69566727e3" width="720" height="480"  controls></video>
 
