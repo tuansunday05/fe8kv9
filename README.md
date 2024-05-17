@@ -167,17 +167,9 @@ python detect_dual.py --source './figure/example.jpg' --img 640 --device 0 --wei
 ## Demo with tracking algorithm
 We also integrated tracking algorithm and made a comparison with Yolov9-e model for more intuitive visuallization. Original video demo taking from [R0 Fish Len Dataset Center Point](https://scidm.nchc.org.tw/dataset/traffic_fisheyelen).
 
-<!-- <video 
-    controls src="./figure/example_30fps.mp4" type="video/mp4">
-></video> -->
+<video src="./figure/example_30fps.mp4" width="720" height="480" type="video/mp4" controls></video>
 
 <!-- [![Our model with StrongSORT](https://img.youtube.com/vi/y6MmkoOy1DY/0.jpg)](https://www.youtube.com/watch?v=y6MmkoOy1DY) -->
-
-<!-- [![Watch the video](https://img.youtube.com/vi/y6MmkoOy1DY/default.jpg)](https://youtu.be/y6MmkoOy1DY) -->
-
-
-<iframe src="https://www.youtube.com/embed/y6MmkoOy1DY" frameborder="0" width="560" height="315" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-
 
 ## Referencess
 <details><summary> <b>Expand</b> </summary>
