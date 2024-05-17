@@ -112,10 +112,10 @@ class WarpLoss(nn.Module):
     def forward(self, pred_bboxes, anchor_points, target_bboxes, bce_loss):
         # Compute angle-based weighting
         angle_loss = self.compute_angle_loss(pred_bboxes, anchor_points, target_bboxes)
-        angle_loss *= 0.3   # angle gain
+        angle_loss *= 0.5   # angle gain
         # Compute distance-based weighting
         dist_loss = self.compute_distance_loss(pred_bboxes, anchor_points)
-        dist_loss *= 0.7    # distance gain
+        dist_loss *= 0.5    # distance gain
         # Combine angle and distance losses
         loss = angle_loss + dist_loss
         loss *= bce_loss
@@ -302,13 +302,12 @@ class ComputeLoss:
             loss[2] += loss2_
         
         # warp loss
-        bce_loss_bbox = self.BCEcls(pred_scores2, target_scores2.to(dtype)).sum(dim = -1)
-
+        bce_loss_bbox2 = self.BCEcls(pred_scores, target_scores.to(dtype)).sum(dim = -1)
         if fg_mask2.sum():
             warp_loss2 = self.warp_loss(pred_bboxes2,
                                         anchor_points,
                                         target_bboxes2,
-                                        bce_loss_bbox)
+                                        bce_loss_bbox2)
             loss[3] += warp_loss2
 
         loss[0] *= 7.5  # box gain
