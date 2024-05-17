@@ -1,12 +1,15 @@
-# YOLOv9
+<h1 style="text-align: center;">YOLOv9-FishEye</h3>
+<!-- # YOLOv9-FishEye -->
 
-Implementation of paper - [YOLOv9: Learning What You Want to Learn Using Programmable Gradient Information](https://arxiv.org/abs/2402.13616)
+This repository is the official implementation of paper  [YOLOv9-FishEye: Improving method for realtime fisheye camera object detection](https://github.com/tuansunday05/fe8kv9)
 
-[![arxiv.org](http://img.shields.io/badge/cs.CV-arXiv%3A2402.13616-B31B1B.svg)](https://arxiv.org/abs/2402.13616)
-[![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/kadirnar/Yolov9)
-[![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/merve/yolov9)
-[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/roboflow-ai/notebooks/blob/main/notebooks/train-yolov9-object-detection-on-custom-dataset.ipynb)
-[![OpenCV](https://img.shields.io/badge/OpenCV-BlogPost-black?logo=opencv&labelColor=blue&color=black)](https://learnopencv.com/yolov9-advancing-the-yolo-legacy/)
+<center>
+
+[![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97_Hugging_Face-Space-blue?logoColor=515A5A&color=blue)](https://huggingface.co/spaces/k20hcmus/FishEye8K)
+[![Colab](https://img.shields.io/badge/Open_in_Colab-blue?logo=googlecolab&logoSize=auto&labelColor=515A5A)]()
+[![Kaggle](https://img.shields.io/badge/Open_in_Kaggle-blue?logo=Kaggle&logoColor=00C5FF&logoSize=auto&labelColor=515A5A)](https://www.kaggle.com/code/tunnguynxun/yolov9-dcnv2-lsk-custom-loss)
+
+</center>
 
 <div align="center">
     <a href="./">
@@ -17,91 +20,64 @@ Implementation of paper - [YOLOv9: Learning What You Want to Learn Using Program
 
 ## Performance 
 
-MS COCO
+Results on [FishEye8K](https://scidm.nchc.org.tw/en/dataset/fisheye8k) dataset. 
 
-| Model | Test Size | AP<sup>val</sup> | AP<sub>50</sub><sup>val</sup> | AP<sub>75</sub><sup>val</sup> | Param. | FLOPs |
+| Model | Test Size | AP<sub>50</sub><sup>test</sup> | mAP<sup>test</sup> | F1-score | Param. | FLOPs |
 | :-- | :-: | :-: | :-: | :-: | :-: | :-: |
-| [**YOLOv9-N (dev)**]() | 640 | **38.3%** | **53.1%** | **41.3%** | **2.0M** | **7.7G** |
-| [**YOLOv9-S**]() | 640 | **46.8%** | **63.4%** | **50.7%** | **7.1M** | **26.4G** |
-| [**YOLOv9-M**]() | 640 | **51.4%** | **68.1%** | **56.1%** | **20.0M** | **76.3G** |
-| [**YOLOv9-C**](https://github.com/WongKinYiu/yolov9/releases/download/v0.1/yolov9-c-converted.pt) | 640 | **53.0%** | **70.2%** | **57.8%** | **25.3M** | **102.1G** |
-| [**YOLOv9-E**](https://github.com/WongKinYiu/yolov9/releases/download/v0.1/yolov9-e-converted.pt) | 640 | **55.6%** | **72.8%** | **60.6%** | **57.3M** | **189.0G** |
+| [**Our-E**]() | 640 | **67.2%** | **46.4%** | **59.8%** | **57.0M** | **186.3G** |
+| [**Our-C (dev)**]() | 640 | **63.3%** | **41.2%** | **55.9%** | **24.8M** | **101.7G** |
+|  |  |  |  |  |  |  |
+| [**YOLOv9-E**]() | 640 | **64.3%** | **44.1%** | **56.7%** | **57.3M** | **189.0G** |
+| [**YOLOv9-C**]() | 640 | **63.3%** | **41.2%** | **55.9%** | **25.3M** | **102.1G** |
+| [**YOLOv8x**]() | 640 | **61.4%** | **40.29%** | **51.0%** | **68.2M** | **257.8G** |
+| [**YOLOv7-X**]() | 640 | **46.74%** | **29.19%** | **57.9%** | **71.3M** | **189.9G** |
+|  |  |  |  |  |  |  |
+| [**YOLOR-W6**]() | 1280 | **64.6%** | **44.2%** | **58.9%** | **79.8M** | **454.0G** |
+| [**YOLOR-P6**]() | 1280 | **66.32%** | **44.0%** | **61.1%** | **37.2M** | **326.2G** |
+| [**YOLOv7-E6E**]() | 1280 | **50.8%** | **32.6%** | **62.9%** | **151.7M** | **843.2G** |
+|  |  |  |  |  |  |  |
 
-<!-- small and medium models will be released after the paper be accepted and published. -->
+## Our proposed model architecture
+Our model is a modified version most inspired from [YOLOv9-e](https://github.com/WongKinYiu/yolov9) model. The target of this modify is tailed for fisheye camera object detection task and also object detection for image from 360 degree camera.
+* Our modify model architecture
+<div align="center">
+    <a href="./">
+        <img src="./figure/Yolov9-e-our-visuallize.png" width="90%"/>
+    </a>
+</div>
 
-## Useful Links
+We replace RepNBottleNeck network in ELAN byRepNLSKBottleNeck by RepNDCNv2BottleNeck and RepNLSKBottleNeck network to get ELAN-DCNv2, ELAN-LSK respectively.
 
-<details><summary> <b>Expand</b> </summary>
+* Our RepNDCNv2BottleNeck network architecture
 
-Custom training: https://github.com/WongKinYiu/yolov9/issues/30#issuecomment-1960955297
-    
-ONNX export: https://github.com/WongKinYiu/yolov9/issues/2#issuecomment-1960519506 https://github.com/WongKinYiu/yolov9/issues/40#issue-2150697688 https://github.com/WongKinYiu/yolov9/issues/130#issue-2162045461
+<div align="center">
+    <a href="./">
+        <img src="./figure/RepNBottleNeckDCNv2.png" width="20%"/>
+    </a>
+</div>
 
-TensorRT inference: https://github.com/WongKinYiu/yolov9/issues/143#issuecomment-1975049660 https://github.com/WongKinYiu/yolov9/issues/34#issue-2150393690 https://github.com/WongKinYiu/yolov9/issues/79#issue-2153547004 https://github.com/WongKinYiu/yolov9/issues/143#issue-2164002309
+* Our RepNLSKBottleNeck network architecture
 
-OpenVINO: https://github.com/WongKinYiu/yolov9/issues/164#issue-2168540003
-
-C# ONNX inference: https://github.com/WongKinYiu/yolov9/issues/95#issue-2155974619
-
-C# OpenVINO inference: https://github.com/WongKinYiu/yolov9/issues/95#issuecomment-1968131244
-
-OpenCV: https://github.com/WongKinYiu/yolov9/issues/113#issuecomment-1971327672
-
-Hugging Face demo: https://github.com/WongKinYiu/yolov9/issues/45#issuecomment-1961496943
-
-CoLab demo: https://github.com/WongKinYiu/yolov9/pull/18
-
-ONNXSlim export: https://github.com/WongKinYiu/yolov9/pull/37
-
-YOLOv9 ROS: https://github.com/WongKinYiu/yolov9/issues/144#issue-2164210644
-
-YOLOv9 ROS TensorRT: https://github.com/WongKinYiu/yolov9/issues/145#issue-2164218595
-
-YOLOv9 Julia: https://github.com/WongKinYiu/yolov9/issues/141#issuecomment-1973710107
-
-YOLOv9 ByteTrack: https://github.com/WongKinYiu/yolov9/issues/78#issue-2153512879
-
-YOLOv9 DeepSORT: https://github.com/WongKinYiu/yolov9/issues/98#issue-2156172319
-
-YOLOv9 counting: https://github.com/WongKinYiu/yolov9/issues/84#issue-2153904804
-
-YOLOv9 face detection: https://github.com/WongKinYiu/yolov9/issues/121#issue-2160218766
-
-YOLOv9 segmentation onnxruntime: https://github.com/WongKinYiu/yolov9/issues/151#issue-2165667350
-
-Comet logging: https://github.com/WongKinYiu/yolov9/pull/110
-
-MLflow logging: https://github.com/WongKinYiu/yolov9/pull/87
-
-AnyLabeling tool: https://github.com/WongKinYiu/yolov9/issues/48#issue-2152139662
-
-AX650N deploy: https://github.com/WongKinYiu/yolov9/issues/96#issue-2156115760
-
-Conda environment: https://github.com/WongKinYiu/yolov9/pull/93
-
-AutoDL docker environment: https://github.com/WongKinYiu/yolov9/issues/112#issue-2158203480
-
-</details>
+<div align="center">
+    <a href="./">
+        <img src="./figure/RepNBottleNeckLSK.png" width="25%"/>
+    </a>
+</div>
 
 
+## Our proposed loss function
+Public after our paper be realeased.
 ## Installation
 
-Docker environment (recommended)
-<details><summary> <b>Expand</b> </summary>
-
 ``` shell
-# create the docker container, you can change the share memory size if you have more.
-nvidia-docker run --name yolov9 -it -v your_coco_path/:/coco/ -v your_code_path/:/yolov9 --shm-size=64g nvcr.io/nvidia/pytorch:21.11-py3
+# Download this repository to local
+git clone https://github.com/tuansunday05/fe8kv9
 
-# apt install required packages
-apt update
-apt install -y zip htop screen libgl1-mesa-glx
+# Install required packages
+pip install -r requirements.txt
 
-# pip install required packages
-pip install seaborn thop
-
-# go to code folder
-cd /yolov9
+# Go to code folder
+cd /fe8kf9
 ```
 
 </details>
@@ -109,147 +85,100 @@ cd /yolov9
 
 ## Evaluation
 
-[`yolov9-c-converted.pt`](https://github.com/WongKinYiu/yolov9/releases/download/v0.1/yolov9-c-converted.pt) [`yolov9-e-converted.pt`](https://github.com/WongKinYiu/yolov9/releases/download/v0.1/yolov9-e-converted.pt) [`yolov9-c.pt`](https://github.com/WongKinYiu/yolov9/releases/download/v0.1/yolov9-c.pt) [`yolov9-e.pt`](https://github.com/WongKinYiu/yolov9/releases/download/v0.1/yolov9-e.pt) [`gelan-c.pt`](https://github.com/WongKinYiu/yolov9/releases/download/v0.1/gelan-c.pt) [`gelan-e.pt`](https://github.com/WongKinYiu/yolov9/releases/download/v0.1/gelan-e.pt)
+[`yolov9-e-converted.pt`]() [`yolov9-e-modify-converted.pt`]() [`yolov9-e-trained.pt`]() [`yolov9-e-modify-trained.pt`]()
 
 ``` shell
+# evaluate our yolov9 modify converted models
+python val.py --data data/fe8kyolo/data.yaml --img 640 --batch 8 --conf 0.5 --iou 0.5 --device 0 --weights './yolov9-e-modify-converted.pt' --task 'test' --save-json --name yolov9_e_our_640_val
+
+# evaluate our yolov9 modify models
+python val_dual.py --data data/fe8kyolo/data.yaml --img 640 --batch 8 --conf 0.5 --iou 0.5 --device 0 --weights './yolov9-e-modify-trained.pt' --task 'test' --save-json --name yolov9_e_our_640_val
+
 # evaluate converted yolov9 models
-python val.py --data data/coco.yaml --img 640 --batch 32 --conf 0.001 --iou 0.7 --device 0 --weights './yolov9-c-converted.pt' --save-json --name yolov9_c_c_640_val
+python val.py --data data/fe8kyolo/data.yaml --img 640 --batch 8 --conf 0.5 --iou 0.5 --device 0 --weights './yolov9-e-converted.pt' --task 'test' --save-json --name yolov9_e_640_val
 
 # evaluate yolov9 models
-#python val_dual.py --data data/coco.yaml --img 640 --batch 32 --conf 0.001 --iou 0.7 --device 0 --weights './yolov9-c.pt' --save-json --name yolov9_c_640_val
-
-# evaluate gelan models
-# python val.py --data data/coco.yaml --img 640 --batch 32 --conf 0.001 --iou 0.7 --device 0 --weights './gelan-c.pt' --save-json --name gelan_c_640_val
+python val_dual.py --data data/fe8kyolo/data.yaml --img 640 --batch 8 --conf 0.5 --iou 0.5 --device 0 --weights './yolov9-e-trained.pt' --task 'test' --save-json --name yolov9_e_640_val
 ```
-
-You will get the results:
-
-```
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.530
- Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.702
- Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.578
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.362
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.585
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.693
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.392
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.652
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.702
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.541
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.760
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.844
-```
-
 
 ## Training
 
-Data preparation
+Data & model preparation
+<!-- 
+``` shell
+# Download data from scidm
+kaggle download ...
+``` -->
+
+* Download [FishEye8K](https://scidm.nchc.org.tw/dataset/fisheye8k/resource/f6e7500d-1d6d-48ea-9d38-c4001a17170e/nchcproxy) dataset images include train & test set. 
+* Split train and validation set by using this ...
+* Create data.yaml in folder like this
+```
+names:
+  - Bus
+  - Bike
+  - Car
+  - Pedestrian
+  - Truck
+nc: 5
+test: /FE8K/test/images
+train: /FE8K/train/images
+val: /FE8K/val/images
+```
+* Download pre-trained model [yolov9-e.pt](https://github.com/WongKinYiu/yolov9/releases/download/v0.1/yolov9-e.pt), [yolov9-c.pt](https://github.com/WongKinYiu/yolov9/releases/download/v0.1/yolov9-c.pt).
+
+
+GPU Training
 
 ``` shell
-bash scripts/get_coco.sh
+# train our yolov9-e modify models
+python train_dual_custom.py --workers 8 --device 0 --batch 16 --data data/fe8kyolo/data.yaml --img 640 --cfg models/detect/accumulate/yolov9-e-dcn9-lsk-elan4.yaml --weights './yolov9-e.pt' --name yolov9-e-dcn9-lsk-elan4 --hyp hyp.scratch-high.yaml --min-items 0 --epochs 500 --close-mosaic 0
+
+# train our yolov9-c modify models (still in development)
+python train_dual_custom.py --workers 8 --device 0 --batch 16 --data data/fe8kyolo/data.yaml --img 640 --cfg models/detect/accumulate/yolov9-c-dcn-lsk-elan4.yaml --weights './yolov9-e.pt' --name yolov9-c-dcn-lsk-elan4 --hyp hyp.scratch-high.yaml --min-items 0 --epochs 500 --close-mosaic 0
 ```
 
-* Download MS COCO dataset images ([train](http://images.cocodataset.org/zips/train2017.zip), [val](http://images.cocodataset.org/zips/val2017.zip), [test](http://images.cocodataset.org/zips/test2017.zip)) and [labels](https://github.com/WongKinYiu/yolov7/releases/download/v0.1/coco2017labels-segments.zip). If you have previously used a different version of YOLO, we strongly recommend that you delete `train2017.cache` and `val2017.cache` files, and redownload [labels](https://github.com/WongKinYiu/yolov7/releases/download/v0.1/coco2017labels-segments.zip) 
-
-Single GPU training
-
+## Model converting  
+Because of using auxiliary for more gradient information in early stage, trained YOLOv9 model need to be converted after training to remove auxiliary branch for simple inference and light-weights. After converting the model, the model architecture of YOLOv9 is actually Gelan with respective version. 
 ``` shell
-# train yolov9 models
-python train_dual.py --workers 8 --device 0 --batch 16 --data data/coco.yaml --img 640 --cfg models/detect/yolov9-c.yaml --weights '' --name yolov9-c --hyp hyp.scratch-high.yaml --min-items 0 --epochs 500 --close-mosaic 15
+# convert our yolov9-e modify models
+python reparameterization.py --cfg './models/detect/gelan-e-our.yaml' --model 'e' --weights './yolov9-e-modify-trained.pt' --classes_num 5 --save './yolov9-e-modify-converted.pt'
 
-# train gelan models
-# python train.py --workers 8 --device 0 --batch 32 --data data/coco.yaml --img 640 --cfg models/detect/gelan-c.yaml --weights '' --name gelan-c --hyp hyp.scratch-high.yaml --min-items 0 --epochs 500 --close-mosaic 15
+# convert our yolov9-c modify models
+python reparameterization.py --cfg './models/detect/gelan-c-our.yaml' --model 'e' --weights './yolov9-c-modify-trained.pt' --classes_num 5 --save './yolov9-c-modify-converted.pt'
 ```
 
-Multiple GPU training
-
-``` shell
-# train yolov9 models
-python -m torch.distributed.launch --nproc_per_node 8 --master_port 9527 train_dual.py --workers 8 --device 0,1,2,3,4,5,6,7 --sync-bn --batch 128 --data data/coco.yaml --img 640 --cfg models/detect/yolov9-c.yaml --weights '' --name yolov9-c --hyp hyp.scratch-high.yaml --min-items 0 --epochs 500 --close-mosaic 15
-
-# train gelan models
-# python -m torch.distributed.launch --nproc_per_node 4 --master_port 9527 train.py --workers 8 --device 0,1,2,3 --sync-bn --batch 128 --data data/coco.yaml --img 640 --cfg models/detect/gelan-c.yaml --weights '' --name gelan-c --hyp hyp.scratch-high.yaml --min-items 0 --epochs 500 --close-mosaic 15
-```
-
-
-## Re-parameterization
-
-See [reparameterization.ipynb](https://github.com/WongKinYiu/yolov9/blob/main/tools/reparameterization.ipynb).
-
-
-## Citation
-
-```
-@article{wang2024yolov9,
-  title={{YOLOv9}: Learning What You Want to Learn Using Programmable Gradient Information},
-  author={Wang, Chien-Yao  and Liao, Hong-Yuan Mark},
-  booktitle={arXiv preprint arXiv:2402.13616},
-  year={2024}
-}
-```
-
-```
-@article{chang2023yolor,
-  title={{YOLOR}-Based Multi-Task Learning},
-  author={Chang, Hung-Shuo and Wang, Chien-Yao and Wang, Richard Robert and Chou, Gene and Liao, Hong-Yuan Mark},
-  journal={arXiv preprint arXiv:2309.16921},
-  year={2023}
-}
-```
-
-
-## Teaser
-
-Parts of code of [YOLOR-Based Multi-Task Learning](https://arxiv.org/abs/2309.16921) are released in the repository.
+## Inference
 
 <div align="center">
     <a href="./">
-        <img src="./figure/multitask.png" width="99%"/>
+        <img src="./figure/example_inf.png" width="45%"/>
     </a>
 </div>
 
-#### Object Detection
 
 ``` shell
-# coco/labels/{split}/*.txt
-# bbox or polygon (1 instance 1 line)
-python train.py --workers 8 --device 0 --batch 32 --data data/coco.yaml --img 640 --cfg models/detect/gelan-c.yaml --weights '' --name gelan-c-det --hyp hyp.scratch-high.yaml --min-items 0 --epochs 300 --close-mosaic 10
+# inference our yolov9 modify converted models
+python detect.py --source './figure/example.jpg' --img 640 --device 0 --weights './yolov9-e-modify-converted.pt' --name yolov9_e_modify_640_detect
+# inference our yolov9 modify trained models
+python detect_dual.py --source './figure/example.jpg' --img 640 --device 0 --weights './yolov9-e-modify-trained.pt' --name yolov9_e_modify_640_detect
 ```
 
-#### Instance Segmentation
+## Demo with tracking algorithm
+We also integrated tracking algorithm and made a comparison with Yolov9-e model for more intuitive visuallization. Original video demo taking from [R0 Fish Len Dataset Center Point](https://scidm.nchc.org.tw/dataset/traffic_fisheyelen).
 
-``` shell
-# coco/labels/{split}/*.txt
-# polygon (1 instance 1 line)
-python segment/train.py --workers 8 --device 0 --batch 32  --data coco.yaml --img 640 --cfg models/segment/gelan-c-seg.yaml --weights '' --name gelan-c-seg --hyp hyp.scratch-high.yaml --epochs 300 --close-mosaic 10 --no-overlap
-```
+<video controls src="figure/example_30fps.mp4" title="Our model with StrongSORT"></video>
 
-#### Panoptic Segmentation
-
-``` shell
-# coco/labels/{split}/*.txt
-# polygon (1 instance 1 line)
-# coco/stuff/{split}/*.txt
-# polygon (1 semantic 1 line)
-python panoptic/train.py --workers 8 --device 0 --batch 32  --data coco.yaml --img 640 --cfg models/panoptic/gelan-c-pan.yaml --weights '' --name gelan-c-pan --hyp hyp.scratch-high.yaml --epochs 300 --close-mosaic 10 --no-overlap
-```
-
-#### Image Captioning (not yet released)
-
-``` shell
-# coco/labels/{split}/*.txt
-# polygon (1 instance 1 line)
-# coco/stuff/{split}/*.txt
-# polygon (1 semantic 1 line)
-# coco/annotations/*.json
-# json (1 split 1 file)
-python caption/train.py --workers 8 --device 0 --batch 32  --data coco.yaml --img 640 --cfg models/caption/gelan-c-cap.yaml --weights '' --name gelan-c-cap --hyp hyp.scratch-high.yaml --epochs 300 --close-mosaic 10 --no-overlap
-```
+<!-- [![Our model with StrongSORT](https://img.youtube.com/vi/y6MmkoOy1DY/0.jpg)](https://www.youtube.com/watch?v=y6MmkoOy1DY "Comparison with Yolov9-e") -->
 
 
-## Acknowledgements
-
+## Referencess
 <details><summary> <b>Expand</b> </summary>
 
+* [https://github.com/MoyoG/FishEye8K](https://github.com/MoyoG/FishEye8K)
+* [https://github.com/WongKinYiu/yolov9](https://github.com/WongKinYiu/yolov9)
+* [https://github.com/open-mmlab/mmdetection](https://github.com/open-mmlab/mmdetection)
+* [https://github.com/zcablii/LSKNet](https://github.com/zcablii/LSKNet)
 * [https://github.com/AlexeyAB/darknet](https://github.com/AlexeyAB/darknet)
 * [https://github.com/WongKinYiu/yolor](https://github.com/WongKinYiu/yolor)
 * [https://github.com/WongKinYiu/yolov7](https://github.com/WongKinYiu/yolov7)
