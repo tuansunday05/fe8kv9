@@ -28,7 +28,7 @@ Results on [FishEye8K](https://scidm.nchc.org.tw/en/dataset/fisheye8k) dataset.
 | [**Our-C (dev)**]() | 640 | **63.3%** | **41.2%** | **55.9%** | **24.8M** | **101.7G** |
 |  |  |  |  |  |  |  |
 | [**YOLOv9-E**]() | 640 | **64.3%** | **44.1%** | **56.7%** | **57.3M** | **189.0G** |
-| [**YOLOv9-C**]() | 640 | **63.3%** | **41.2%** | **55.9%** | **25.3M** | **102.1G** |
+| [**YOLOv9-C**]() | 640 | **61.3%** | **40.2%** | **55.9%** | **25.3M** | **102.1G** |
 | [**YOLOv8x**]() | 640 | **61.4%** | **40.29%** | **51.0%** | **68.2M** | **257.8G** |
 | [**YOLOv7-X**]() | 640 | **46.74%** | **29.19%** | **57.9%** | **71.3M** | **189.9G** |
 |  |  |  |  |  |  |  |
@@ -52,7 +52,7 @@ We replace RepNBottleNeck network in ELAN byRepNLSKBottleNeck by RepNDCNv2Bottle
 
 <div align="center">
     <a href="./">
-        <img src="./figure/RepNBottleNeckDCNv2.png" width="20%"/>
+        <img src="./figure/RepNBottleNeckDCNv2.png" width="30%"/>
     </a>
 </div>
 
@@ -60,7 +60,7 @@ We replace RepNBottleNeck network in ELAN byRepNLSKBottleNeck by RepNDCNv2Bottle
 
 <div align="center">
     <a href="./">
-        <img src="./figure/RepNBottleNeckLSK.png" width="25%"/>
+        <img src="./figure/RepNBottleNeckLSK.png" width="30%"/>
     </a>
 </div>
 
@@ -167,9 +167,9 @@ python detect_dual.py --source './figure/example.jpg' --img 640 --device 0 --wei
 ## Demo with tracking algorithm
 We also integrated tracking algorithm and made a comparison with Yolov9-e model for more intuitive visuallization. Original video demo taking from [R0 Fish Len Dataset Center Point](https://scidm.nchc.org.tw/dataset/traffic_fisheyelen).
 
-<video controls src="figure/example_30fps.mp4" title="Our model with StrongSORT"></video>
+<!-- <video controls src="figure/example_30fps.mp4" title="Our model with StrongSORT"></video> -->
 
-<!-- [![Our model with StrongSORT](https://img.youtube.com/vi/y6MmkoOy1DY/0.jpg)](https://www.youtube.com/watch?v=y6MmkoOy1DY "Comparison with Yolov9-e") -->
+[![Our model with StrongSORT](https://img.youtube.com/vi/y6MmkoOy1DY/0.jpg)](https://www.youtube.com/watch?v=y6MmkoOy1DY "Comparison with Yolov9-e")
 
 
 ## Referencess
