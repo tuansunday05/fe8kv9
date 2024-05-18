@@ -2,16 +2,23 @@ import os
 from sklearn.model_selection import train_test_split
 import shutil
 import os
+import argparse
 
-PATH = '.../fisheye8k/train' # path to train
-PATH_create = '.../fisheye8k/' # path to create folder
+# Parse command line arguments
+parser = argparse.ArgumentParser(description='Split data into train and validation sets.')
+parser.add_argument('--path', type=str, help='Path to the training data.')
+parser.add_argument('--path_create', type=str, help='Path to create new folders.')
+args = parser.parse_args()
 
-os.mkdir(PATH_create + "train - Copy")
-os.mkdir(PATH_create + "val")
-os.mkdir(PATH_create + "train - Copy/images")
-os.mkdir(PATH_create + "train - Copy/labels")
-os.mkdir(PATH_create + "val/images")
-os.mkdir(PATH_create + "val/labels")
+PATH = args.path # path to train
+PATH_create = args.path_create # path to create folder
+
+os.mkdir(PATH_create + "/train - Copy")
+os.mkdir(PATH_create + "/val")
+os.mkdir(PATH_create + "/train - Copy/images")
+os.mkdir(PATH_create + "/train - Copy/labels")
+os.mkdir(PATH_create + "/val/images")
+os.mkdir(PATH_create + "/val/labels")
 
 # Check if the directory exists
 if os.path.exists(PATH + '/images'):
@@ -43,10 +50,10 @@ def move_files_to_folder(list_of_files, destination_folder):
             assert False
 
 # Move the splits into their folders
-move_files_to_folder(train_images, PATH_create + 'train - Copy/images')
-move_files_to_folder(val_images, PATH_create + 'val/images')
-move_files_to_folder(train_annotations, PATH_create + 'train - Copy/labels')
-move_files_to_folder(val_annotations, PATH_create + 'val/labels')
+move_files_to_folder(train_images, PATH_create + '/train - Copy/images')
+move_files_to_folder(val_images, PATH_create + '/val/images')
+move_files_to_folder(train_annotations, PATH_create + '/train - Copy/labels')
+move_files_to_folder(val_annotations, PATH_create + '/val/labels')
 
-shutil.rmtree('.../fisheye8k/train')
-os.rename(PATH_create + 'train - Copy', PATH_create + 'train')
+shutil.rmtree(PATH)
+os.rename(PATH_create + '/train - Copy', PATH_create + '/train')
