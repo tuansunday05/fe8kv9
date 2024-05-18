@@ -110,7 +110,7 @@ kaggle download ...
 ``` -->
 
 * Download [FishEye8K](https://scidm.nchc.org.tw/dataset/fisheye8k/resource/f6e7500d-1d6d-48ea-9d38-c4001a17170e/nchcproxy) dataset images include train & test set. 
-* Split train and validation set by using this ...
+* Split train and validation set by using this [file](split_train.py)
 * Create data.yaml in folder like this
 ```
 names:
