@@ -25,10 +25,10 @@ Results on [FishEye8K](https://scidm.nchc.org.tw/en/dataset/fisheye8k) dataset.
 | Model | Test Size | AP<sub>50</sub><sup>test</sup> | mAP<sup>test</sup> | F1-score | Param. | FLOPs |
 | :-- | :-: | :-: | :-: | :-: | :-: | :-: |
 | [**Our-E**]() | 640 | **67.2%** | **46.4%** | **59.8%** | **57.0M** | **186.3G** |
-| [**Our-C (dev)**]() | 640 | **63.3%** | **41.2%** | **55.9%** | **24.8M** | **101.7G** |
+| [**Our-C**]() | 640 | **63.2%** | **42.9%** | **55.1%** | **24.7M** | **101.4G** |
 |  |  |  |  |  |  |  |
 | [**YOLOv9-E**]() | 640 | **64.3%** | **44.1%** | **56.7%** | **57.3M** | **189.0G** |
-| [**YOLOv9-C**]() | 640 | **61.3%** | **40.2%** | **55.9%** | **25.3M** | **102.1G** |
+| [**YOLOv9-C**]() | 640 | **60.8%** | **41.2%** | **53.7%** | **25.3M** | **102.1G** |
 | [**YOLOv8x**]() | 640 | **61.4%** | **40.29%** | **51.0%** | **68.2M** | **257.8G** |
 | [**YOLOv7-X**]() | 640 | **46.74%** | **29.19%** | **57.9%** | **71.3M** | **189.9G** |
 |  |  |  |  |  |  |  |
@@ -51,7 +51,7 @@ We replace RepNBottleNeck network in ELAN byRepNLSKBottleNeck by RepNDCNv2Bottle
 
 <div align="center">
     <a href="./">
-        <img src="./figure/RepNBottleNeckDCNv2.png" width="30%"/>
+        <img src="./figure/RepNBottleNeckDCNv2.png" width="25%"/>
     </a>
 </div>
 
@@ -59,7 +59,7 @@ We replace RepNBottleNeck network in ELAN byRepNLSKBottleNeck by RepNDCNv2Bottle
 
 <div align="center">
     <a href="./">
-        <img src="./figure/RepNBottleNeckLSK.png" width="30%"/>
+        <img src="./figure/RepNBottleNeckLSK.png" width="32%"/>
     </a>
 </div>
 
@@ -84,7 +84,9 @@ cd /fe8kf9
 
 ## Evaluation
 
-[`yolov9-e-converted.pt`]() [`yolov9-e-modify-converted.pt`]() [`yolov9-e-trained.pt`]() [`yolov9-e-modify-trained.pt`]()
+Extra large version: [`yolov9-e-modify-converted.pt`](https://github.com/tuansunday05/fe8kv9/releases/download/v1.0/yolov9-e-modify-converted.pt) [`yolov9-e-modify-trained.pt`](https://github.com/tuansunday05/fe8kv9/releases/download/v1.0/yolov9-e-modify-trained.pt) 
+
+Compact version: [`yolov9-c-modify-converted.pt`](https://github.com/tuansunday05/fe8kv9/releases/download/v1.0/yolov9-c-modify-converted.pt) [`yolov9-c-modify-trained.pt`](https://github.com/tuansunday05/fe8kv9/releases/download/v1.0/yolov9-c-modify-trained.pt)
 
 ``` shell
 # evaluate our yolov9 modify converted models
