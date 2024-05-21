@@ -37,7 +37,7 @@ Results on [FishEye8K](https://scidm.nchc.org.tw/en/dataset/fisheye8k) dataset.
 | [**YOLOv7-E6E**]() | 1280 | **50.8%** | **32.6%** | **62.9%** | **151.7M** | **843.2G** |
 
 ## Our proposed model architecture
-Our model is a modified version most inspired from [YOLOv9-e](https://github.com/WongKinYiu/yolov9) model. The target of this modify is tailed for fisheye camera object detection task and also object detection for image from 360 degree camera.
+Our work is a modified version most inspired from [YOLOv9](https://github.com/WongKinYiu/yolov9). The target of this modify is tailed for fisheye camera object detection task and also object detection for image from 360 degree camera.
 * Our modify model architecture
 <div align="center">
     <a href="./">
@@ -112,7 +112,7 @@ kaggle download ...
 ``` -->
 
 * Download [FishEye8K](https://scidm.nchc.org.tw/dataset/fisheye8k/resource/f6e7500d-1d6d-48ea-9d38-c4001a17170e/nchcproxy) dataset images include train & test set. 
-* Split train and validation set by using this [file](split_data.py)
+* Split train and validation set by using [split_data.py](split_data.py)
 * Create data.yaml in folder like this
 ```
 names:
