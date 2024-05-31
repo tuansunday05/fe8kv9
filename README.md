@@ -1,7 +1,7 @@
 <h1 style="text-align: center;">YOLOv9-FishEye</h3>
 <!-- # YOLOv9-FishEye -->
 
-This repository is the official implementation of paper  [YOLOv9-FishEye: Improving method for realtime fisheye camera object detection](https://github.com/tuansunday05/fe8kv9)
+This repository is the official implementation of paper  [YOLOv9-FishEye: Improving method for fisheye camera object detection](https://github.com/tuansunday05/fe8kv9)
 
 <center>
 
