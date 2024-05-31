@@ -6,7 +6,7 @@ This repository is the official implementation of paper  [YOLOv9-FishEye: Improv
 <center>
 
 [![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97_Hugging_Face-Space-blue?logoColor=515A5A&color=blue)](https://huggingface.co/spaces/k20hcmus/FishEye8K)
-[![Colab](https://img.shields.io/badge/Open_in_Colab-blue?logo=googlecolab&logoSize=auto&labelColor=515A5A)]()
+[![Colab](https://img.shields.io/badge/Open_in_Colab-blue?logo=googlecolab&logoSize=auto&labelColor=515A5A)](https://colab.research.google.com/drive/1JwF5k0Pk3fr-w1yT8Rwdi0XIk7-yIRip?usp=sharing)
 [![Kaggle](https://img.shields.io/badge/Open_in_Kaggle-blue?logo=Kaggle&logoColor=00C5FF&logoSize=auto&labelColor=515A5A)](https://www.kaggle.com/code/tunnguynxun/yolov9-dcnv2-lsk-custom-loss)
 
 </center>
